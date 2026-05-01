@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root {
   --bg: #0a0e14;
@@ -987,7 +988,7 @@ body {
     <div class="modal-body">
       <div class="event-list" id="event-list"></div>
       <div class="btn-row" style="margin-top:14px">
-        <button class="btn" onclick="downloadCSV()">⬇ EXPORTAR CSV</button>
+        <button class="btn" onclick="downloadXLSX()">⬇ EXPORTAR EXCEL</button>
         <button class="btn primary" onclick="syncNow(); closeModal('history-modal')">⬆ SYNC</button>
       </div>
     </div>
@@ -995,28 +996,23 @@ body {
 </div>
 
 <!-- CSV fallback modal -->
-<div class="modal-backdrop hidden" id="csv-fallback-modal">
+<div class="modal-backdrop hidden" id="xlsx-fallback-modal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">⬇ EXPORTAR DATOS</div>
-      <button class="icon-btn" onclick="closeModal('csv-fallback-modal')">✕</button>
+      <div class="modal-title">⬇ EXPORTAR EXCEL</div>
+      <button class="icon-btn" onclick="closeModal('xlsx-fallback-modal')">✕</button>
     </div>
     <div class="modal-body">
       <div class="help-text">
-        Si el archivo no se descargó automáticamente, usá <b>Compartir</b> para enviarlo
-        a vos mismo (WhatsApp, email, Drive) o <b>Copiar</b> y pegarlo en una nota.
+        El archivo Excel se generó. Tocá <b>Compartir</b> para enviarlo por
+        WhatsApp, email o Drive.
       </div>
       <div class="field-group">
-        <label>Nombre sugerido</label>
-        <div style="font-family: var(--mono); font-size: 12px; color: var(--accent); padding: 6px 0;" id="csv-filename"></div>
-      </div>
-      <div class="field-group">
-        <label>Contenido CSV</label>
-        <textarea id="csv-content" readonly style="height: 180px; font-family: var(--mono); font-size: 10px; resize: vertical;"></textarea>
+        <label>Archivo</label>
+        <div style="font-family: var(--mono); font-size: 12px; color: var(--accent); padding: 6px 0;" id="xlsx-filename"></div>
       </div>
       <div class="btn-row">
-        <button class="btn primary" onclick="shareCSV()">📤 COMPARTIR</button>
-        <button class="btn" onclick="copyCSV()">📋 COPIAR</button>
+        <button class="btn primary" onclick="shareXLSX()">📤 COMPARTIR / DESCARGAR</button>
       </div>
     </div>
   </div>
@@ -1703,87 +1699,523 @@ async function syncNow() {
   }
 }
 
-function downloadCSV() {
+function downloadXLSX() {
   if (!STATE.events.length) { showToast('No hay eventos', 'error'); return; }
-  const headers = ['ID','FechaHora','Partido','Tiempo','Equipo','Evento','Resultado','Zona','ZonaDesc','Puntos'];
-  const rows = STATE.events.map(e => [
-    e.id, e.timestamp, e.match, e.half, e.teamName,
-    e.eventName, e.outcomeLabel || e.outcome || '', e.zone, e.zoneDesc, e.score || 0
+  if (typeof XLSX === 'undefined') {
+    showToast('Cargando librería... probá de nuevo', 'error');
+    return;
+  }
+
+  const teamA = STATE.config.teamA;
+  const teamB = STATE.config.teamB;
+  const matchName = STATE.config.matchName || 'Partido sin nombre';
+
+  // ==================== HELPERS ====================
+  const cnt = (team, ev, oc) => STATE.events.filter(e =>
+    e.team === team && e.event === ev &&
+    (oc === undefined || e.outcome === oc)
+  ).length;
+  const cntPrefix = (team, ev, prefix) => STATE.events.filter(e =>
+    e.team === team && e.event === ev && (e.outcome || '').startsWith(prefix)
+  ).length;
+  const score = team => STATE.events.filter(e => e.team === team).reduce((s, e) => s + (e.score || 0), 0);
+
+  // Style presets
+  const HDR = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11, name: 'Arial' },
+                fill: { fgColor: { rgb: '1F2937' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border: { top:{style:'thin',color:{rgb:'D1D5DB'}}, bottom:{style:'thin',color:{rgb:'D1D5DB'}}, left:{style:'thin',color:{rgb:'D1D5DB'}}, right:{style:'thin',color:{rgb:'D1D5DB'}} } };
+  const SUB = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10, name: 'Arial' },
+                fill: { fgColor: { rgb: '374151' } },
+                alignment: { horizontal: 'center', vertical: 'center' } };
+  const TITLE = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 14, name: 'Arial' },
+                  fill: { fgColor: { rgb: '1F2937' } },
+                  alignment: { horizontal: 'center', vertical: 'center' } };
+  const RED = { font: { bold: true, color: { rgb: 'C82424' }, sz: 11, name: 'Arial' },
+                fill: { fgColor: { rgb: 'FFE4E4' } },
+                alignment: { horizontal: 'center', vertical: 'center' } };
+  const BLUE = { font: { bold: true, color: { rgb: '2470C8' }, sz: 11, name: 'Arial' },
+                 fill: { fgColor: { rgb: 'E4EFFB' } },
+                 alignment: { horizontal: 'center', vertical: 'center' } };
+  const LBL = { font: { sz: 10, name: 'Arial' },
+                alignment: { horizontal: 'left', vertical: 'center', indent: 1 } };
+  const LBL_BOLD = { font: { bold: true, sz: 10, name: 'Arial' },
+                     alignment: { horizontal: 'left', vertical: 'center', indent: 1 } };
+  const NEUTRAL = { font: { sz: 10, name: 'Arial' },
+                    alignment: { horizontal: 'center', vertical: 'center' } };
+  const ACCENT = { font: { bold: true, sz: 10, name: 'Arial' },
+                   fill: { fgColor: { rgb: 'FEF3C7' } },
+                   alignment: { horizontal: 'center', vertical: 'center' } };
+  const NOTE = { font: { italic: true, sz: 9, name: 'Arial', color: { rgb: '6B7280' } },
+                 alignment: { horizontal: 'left', vertical: 'center', wrapText: true, indent: 1 } };
+
+  // Helper: build a sheet from a 2D array of {v, s, f?} cells
+  function buildSheet(data, merges, colWidths, rowHeights) {
+    const ws = {};
+    const range = { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
+    data.forEach((row, r) => {
+      row.forEach((cell, c) => {
+        if (cell === null || cell === undefined) return;
+        const ref = XLSX.utils.encode_cell({ r, c });
+        const obj = typeof cell === 'object' && cell !== null && ('v' in cell || 'f' in cell)
+          ? { ...cell }
+          : { v: cell };
+        if (typeof obj.v === 'number') obj.t = 'n';
+        else if (typeof obj.v === 'boolean') obj.t = 'b';
+        else obj.t = 's';
+        ws[ref] = obj;
+        if (r > range.e.r) range.e.r = r;
+        if (c > range.e.c) range.e.c = c;
+      });
+    });
+    ws['!ref'] = XLSX.utils.encode_range(range);
+    if (merges) ws['!merges'] = merges;
+    if (colWidths) ws['!cols'] = colWidths.map(w => ({ wch: w }));
+    if (rowHeights) ws['!rows'] = rowHeights;
+    return ws;
+  }
+
+  const wb = XLSX.utils.book_new();
+
+  // ==================== HOJA 1: RESUMEN ====================
+  const sA = score('A'), sB = score('B');
+  const aTry5 = cnt('A','try','try5'), bTry5 = cnt('B','try','try5');
+  const aTry7 = cnt('A','try','try7') + cnt('A','try','trypenal');
+  const bTry7 = cnt('B','try','try7') + cnt('B','try','trypenal');
+  const aTries = aTry5 + aTry7, bTries = bTry5 + bTry7;
+  const aPenP = cnt('A','penal','favor_palos_conv'), bPenP = cnt('B','penal','favor_palos_conv');
+  const aPenE = cnt('A','penal','favor_palos_err'), bPenE = cnt('B','penal','favor_palos_err');
+  const aDrop = cnt('A','drop','convertido'), bDrop = cnt('B','drop','convertido');
+  const aDropE = cnt('A','drop','errado'), bDropE = cnt('B','drop','errado');
+  const aQT = cnt('A','quiebre','contry'), bQT = cnt('B','quiebre','contry');
+  const aQuiebres = aQT + cnt('A','quiebre','continuid') + cnt('A','quiebre','placado');
+  const bQuiebres = bQT + cnt('B','quiebre','continuid') + cnt('B','quiebre','placado');
+  const aPenF = cntPrefix('A','penal','favor'), bPenF = cntPrefix('B','penal','favor');
+  const aKoC = cnt('A','knockon','encontra'), bKoC = cnt('B','knockon','encontra');
+  const aPerd = STATE.events.filter(e => e.team === 'A' && e.event === 'perdida').length;
+  const bPerd = STATE.events.filter(e => e.team === 'B' && e.event === 'perdida').length;
+  const aKickS = cnt('A','kick','aseguir'), bKickS = cnt('B','kick','aseguir');
+
+  const resumenData = [
+    [{ v: `RUGBY STATS — ${teamA.toUpperCase()} ${sA} vs ${teamB.toUpperCase()} ${sB}`, s: TITLE }],
+    [],
+    [{ v: 'Partido', s: LBL_BOLD }, { v: matchName, s: LBL }],
+    [{ v: 'Resultado', s: LBL_BOLD }, { v: `${sA} — ${sB}`, s: LBL }],
+    [{ v: `Equipo A (Local)`, s: LBL_BOLD }, { v: teamA, s: LBL }],
+    [{ v: `Equipo B (Visitante)`, s: LBL_BOLD }, { v: teamB, s: LBL }],
+    [],
+    [{ v: 'TANTEADOR', s: SUB }],
+    [{ v: '', s: HDR }, { v: teamA, s: HDR }, { v: teamB, s: HDR }, { v: 'Diferencia', s: HDR }],
+    [{ v: 'Puntos totales', s: LBL }, { v: sA, s: RED }, { v: sB, s: BLUE }, { v: sB - sA, s: NEUTRAL }],
+    [{ v: 'Tries', s: LBL }, { v: aTries, s: RED }, { v: bTries, s: BLUE }, { v: bTries - aTries, s: NEUTRAL }],
+    [{ v: 'Conversiones', s: LBL }, { v: `${aTry7}/${aTries || 0}`, s: RED }, { v: `${bTry7}/${bTries || 0}`, s: BLUE }, { v: '', s: NEUTRAL }],
+    [{ v: 'Penales palos', s: LBL }, { v: `${aPenP}/${aPenP+aPenE}`, s: RED }, { v: `${bPenP}/${bPenP+bPenE}`, s: BLUE }, { v: '', s: NEUTRAL }],
+    [{ v: 'Drops', s: LBL }, { v: `${aDrop}/${aDrop+aDropE}`, s: RED }, { v: `${bDrop}/${bDrop+bDropE}`, s: BLUE }, { v: '', s: NEUTRAL }],
+    [],
+    [{ v: 'INDICADORES CLAVE', s: SUB }],
+    [{ v: '', s: HDR }, { v: teamA, s: HDR }, { v: teamB, s: HDR }, { v: 'Comentario', s: HDR }],
+    [{ v: 'Quiebres totales', s: LBL }, { v: aQuiebres, s: RED }, { v: bQuiebres, s: BLUE }, { v: '', s: NOTE }],
+    [{ v: 'Quiebres con try', s: LBL }, { v: aQT, s: RED }, { v: bQT, s: BLUE }, { v: '', s: NOTE }],
+    [{ v: 'Penales a favor', s: LBL }, { v: aPenF, s: RED }, { v: bPenF, s: BLUE }, { v: '', s: NOTE }],
+    [{ v: 'Knock-on en contra', s: LBL }, { v: aKoC, s: RED }, { v: bKoC, s: BLUE }, { v: '', s: NOTE }],
+    [{ v: 'Pérdidas de posesión', s: LBL }, { v: aPerd, s: RED }, { v: bPerd, s: BLUE }, { v: '', s: NOTE }],
+    [{ v: 'Kicks a seguir', s: LBL }, { v: aKickS, s: RED }, { v: bKickS, s: BLUE }, { v: '', s: NOTE }],
+  ];
+  const resumenMerges = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+    { s: { r: 7, c: 0 }, e: { r: 7, c: 3 } },
+    { s: { r: 15, c: 0 }, e: { r: 15, c: 3 } },
+  ];
+  wb.SheetNames.push('Resumen');
+  wb.Sheets['Resumen'] = buildSheet(resumenData, resumenMerges, [28, 18, 18, 32]);
+
+  // ==================== HOJA 2: SET PIECES ====================
+  const sp = [
+    { id: 'cajon', label: 'Cajón', hasRobado: false },
+    { id: 'scrum', label: 'Scrums', hasRobado: true },
+    { id: 'line',  label: 'Lines',  hasRobado: true },
+    { id: 'ruck',  label: 'Rucks',  hasRobado: false },
+    { id: 'maul',  label: 'Mauls',  hasRobado: false },
+  ];
+  const setPiecesData = [
+    [{ v: 'SET PIECES', s: TITLE }],
+    [],
+    [
+      { v: 'Categoría', s: HDR },
+      { v: `${teamA} Ganados`, s: HDR }, { v: `${teamA} Perdidos`, s: HDR }, { v: `${teamA} Robados`, s: HDR },
+      { v: `${teamB} Ganados`, s: HDR }, { v: `${teamB} Perdidos`, s: HDR }, { v: `${teamB} Robados`, s: HDR },
+    ],
+  ];
+  sp.forEach(s => {
+    const aW = cnt('A', s.id, 'ganado'), aL = cnt('A', s.id, 'perdido');
+    const bW = cnt('B', s.id, 'ganado'), bL = cnt('B', s.id, 'perdido');
+    const aR = s.hasRobado ? cnt('A', s.id, 'robado') : '—';
+    const bR = s.hasRobado ? cnt('B', s.id, 'robado') : '—';
+    setPiecesData.push([
+      { v: s.label, s: LBL_BOLD },
+      { v: aW, s: RED }, { v: aL, s: RED }, { v: aR, s: RED },
+      { v: bW, s: BLUE }, { v: bL, s: BLUE }, { v: bR, s: BLUE },
+    ]);
+  });
+
+  setPiecesData.push([]);
+  setPiecesData.push([{ v: 'EFECTIVIDAD', s: SUB }]);
+  setPiecesData.push([
+    { v: 'Categoría', s: HDR },
+    { v: `${teamA} Total`, s: HDR }, { v: `${teamA} Efectivos`, s: HDR }, { v: `${teamA} %`, s: HDR },
+    { v: `${teamB} Total`, s: HDR }, { v: `${teamB} Efectivos`, s: HDR }, { v: `${teamB} %`, s: HDR },
   ]);
-  const csv = [headers, ...rows]
-    .map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(','))
-    .join('\n');
+  let totRowStart = setPiecesData.length + 1;
+  sp.forEach(s => {
+    const aW = cnt('A', s.id, 'ganado'), aL = cnt('A', s.id, 'perdido');
+    const bW = cnt('B', s.id, 'ganado'), bL = cnt('B', s.id, 'perdido');
+    const aR = s.hasRobado ? cnt('A', s.id, 'robado') : 0;
+    const bR = s.hasRobado ? cnt('B', s.id, 'robado') : 0;
+    const aTot = aW + aL + aR, bTot = bW + bL + bR;
+    const aEf = aW + aR, bEf = bW + bR;
+    const aPct = aTot ? aEf / aTot : 0;
+    const bPct = bTot ? bEf / bTot : 0;
+    setPiecesData.push([
+      { v: s.label, s: LBL_BOLD },
+      { v: aTot, s: RED }, { v: aEf, s: RED },
+      { v: aPct, s: { ...RED, numFmt: '0%' } },
+      { v: bTot, s: BLUE }, { v: bEf, s: BLUE },
+      { v: bPct, s: { ...BLUE, numFmt: '0%' } },
+    ]);
+  });
 
-  const filename = `rugby-stats-${new Date().toISOString().slice(0,10)}.csv`;
+  const spMerges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
+  const subRowIdx = setPiecesData.findIndex(r => r[0] && r[0].v === 'EFECTIVIDAD');
+  if (subRowIdx >= 0) spMerges.push({ s: { r: subRowIdx, c: 0 }, e: { r: subRowIdx, c: 6 } });
+  wb.SheetNames.push('Set Pieces');
+  wb.Sheets['Set Pieces'] = buildSheet(setPiecesData, spMerges, [18, 16, 16, 16, 16, 16, 16]);
 
-  // Try multiple download strategies — webviews block different ones
-  let downloaded = false;
+  // ==================== HOJA 3: ANOTACIONES ====================
+  const anotData = [
+    [{ v: 'ANOTACIONES Y QUIEBRES', s: TITLE }],
+    [],
+    [{ v: 'Concepto', s: HDR }, { v: teamA, s: HDR }, { v: teamB, s: HDR }, { v: 'Diferencia', s: HDR }],
+    [{ v: 'Tries totales', s: LBL }, { v: aTries, s: RED }, { v: bTries, s: BLUE }, { v: bTries - aTries, s: NEUTRAL }],
+    [{ v: 'Tries convertidos', s: LBL }, { v: aTry7, s: RED }, { v: bTry7, s: BLUE }, { v: bTry7 - aTry7, s: NEUTRAL }],
+    [{ v: 'Tries sin convertir', s: LBL }, { v: aTry5, s: RED }, { v: bTry5, s: BLUE }, { v: bTry5 - aTry5, s: NEUTRAL }],
+    [{ v: '% conversión', s: LBL },
+      { v: aTries ? aTry7/aTries : 0, s: { ...RED, numFmt: '0%' } },
+      { v: bTries ? bTry7/bTries : 0, s: { ...BLUE, numFmt: '0%' } },
+      { v: '', s: NEUTRAL }],
+    [{ v: 'Penales a los palos (intentados)', s: LBL }, { v: aPenP+aPenE, s: RED }, { v: bPenP+bPenE, s: BLUE }, { v: '', s: NEUTRAL }],
+    [{ v: 'Penales a los palos (convertidos)', s: LBL }, { v: aPenP, s: RED }, { v: bPenP, s: BLUE }, { v: '', s: NEUTRAL }],
+    [{ v: 'Drops (intentados)', s: LBL }, { v: aDrop+aDropE, s: RED }, { v: bDrop+bDropE, s: BLUE }, { v: '', s: NEUTRAL }],
+    [{ v: 'Drops (convertidos)', s: LBL }, { v: aDrop, s: RED }, { v: bDrop, s: BLUE }, { v: '', s: NEUTRAL }],
+    [],
+    [{ v: 'QUIEBRES (paso de línea de ventaja)', s: SUB }],
+    [{ v: 'Concepto', s: HDR }, { v: teamA, s: HDR }, { v: teamB, s: HDR }, { v: 'Diferencia', s: HDR }],
+    [{ v: 'Total quiebres', s: LBL }, { v: aQuiebres, s: RED }, { v: bQuiebres, s: BLUE }, { v: bQuiebres-aQuiebres, s: NEUTRAL }],
+    [{ v: 'Con try', s: LBL }, { v: aQT, s: RED }, { v: bQT, s: BLUE }, { v: bQT-aQT, s: NEUTRAL }],
+    [{ v: 'Continuidad', s: LBL }, { v: cnt('A','quiebre','continuid'), s: RED }, { v: cnt('B','quiebre','continuid'), s: BLUE }, { v: '', s: NEUTRAL }],
+    [{ v: 'Placado', s: LBL }, { v: cnt('A','quiebre','placado'), s: RED }, { v: cnt('B','quiebre','placado'), s: BLUE }, { v: '', s: NEUTRAL }],
+    [{ v: '% efectividad (try o continuidad)', s: LBL },
+      { v: aQuiebres ? (aQT + cnt('A','quiebre','continuid'))/aQuiebres : 0, s: { ...RED, numFmt: '0%' } },
+      { v: bQuiebres ? (bQT + cnt('B','quiebre','continuid'))/bQuiebres : 0, s: { ...BLUE, numFmt: '0%' } },
+      { v: '', s: NEUTRAL }],
+  ];
+  const anotMerges = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+    { s: { r: 12, c: 0 }, e: { r: 12, c: 3 } },
+  ];
+  wb.SheetNames.push('Anotaciones');
+  wb.Sheets['Anotaciones'] = buildSheet(anotData, anotMerges, [38, 16, 16, 14]);
+
+  // ==================== HOJA 4: PENALES Y PERDIDAS ====================
+  const aFk = cntPrefix('A','freekick','favor'), bFk = cntPrefix('B','freekick','favor');
+  const aPenR = cnt('A','penal','recibido'), bPenR = cnt('B','penal','recibido');
+  const aKoF = cnt('A','knockon','favor'), bKoF = cnt('B','knockon','favor');
+  const aPI = cnt('A','perdida','intercept'), bPI = cnt('B','perdida','intercept');
+  const aPF = cnt('A','perdida','forward'), bPF = cnt('B','perdida','forward');
+  const aPT = cnt('A','perdida','tackle'), bPT = cnt('B','perdida','tackle');
+  const aPO = cnt('A','perdida','otro'), bPO = cnt('B','perdida','otro');
+  const aKickT = cnt('A','kick','touch'), bKickT = cnt('B','kick','touch');
+  const aKickD = cnt('A','kick','directo'), bKickD = cnt('B','kick','directo');
+
+  const penData = [
+    [{ v: 'PENALES, FALTAS Y PÉRDIDAS', s: TITLE }],
+    [],
+    [{ v: 'PENALES Y FREE KICKS', s: SUB }],
+    [{ v: 'Concepto', s: HDR }, { v: teamA, s: HDR }, { v: teamB, s: HDR }, { v: 'Total', s: HDR }],
+    [{ v: 'Penales a favor', s: LBL }, { v: aPenF, s: RED }, { v: bPenF, s: BLUE }, { v: aPenF+bPenF, s: NEUTRAL }],
+    [{ v: 'Penales recibidos', s: LBL }, { v: aPenR, s: RED }, { v: bPenR, s: BLUE }, { v: aPenR+bPenR, s: NEUTRAL }],
+    [{ v: 'Free kicks', s: LBL }, { v: aFk, s: RED }, { v: bFk, s: BLUE }, { v: aFk+bFk, s: NEUTRAL }],
+    [],
+    [{ v: 'KNOCK ON', s: SUB }],
+    [{ v: 'Concepto', s: HDR }, { v: teamA, s: HDR }, { v: teamB, s: HDR }, { v: 'Total', s: HDR }],
+    [{ v: 'A favor (lo hizo el rival)', s: LBL }, { v: aKoF, s: RED }, { v: bKoF, s: BLUE }, { v: aKoF+bKoF, s: NEUTRAL }],
+    [{ v: 'En contra (lo hicimos nosotros)', s: LBL }, { v: aKoC, s: RED }, { v: bKoC, s: BLUE }, { v: aKoC+bKoC, s: NEUTRAL }],
+    [],
+    [{ v: 'PÉRDIDAS DE POSESIÓN', s: SUB }],
+    [{ v: 'Concepto', s: HDR }, { v: teamA, s: HDR }, { v: teamB, s: HDR }, { v: 'Total', s: HDR }],
+    [{ v: 'Total pérdidas', s: LBL_BOLD }, { v: aPerd, s: RED }, { v: bPerd, s: BLUE }, { v: aPerd+bPerd, s: NEUTRAL }],
+    [{ v: '  Intercept', s: LBL }, { v: aPI, s: RED }, { v: bPI, s: BLUE }, { v: aPI+bPI, s: NEUTRAL }],
+    [{ v: '  Pase adelantado', s: LBL }, { v: aPF, s: RED }, { v: bPF, s: BLUE }, { v: aPF+bPF, s: NEUTRAL }],
+    [{ v: '  En el tackle', s: LBL }, { v: aPT, s: RED }, { v: bPT, s: BLUE }, { v: aPT+bPT, s: NEUTRAL }],
+    [{ v: '  Otro', s: LBL }, { v: aPO, s: RED }, { v: bPO, s: BLUE }, { v: aPO+bPO, s: NEUTRAL }],
+    [],
+    [{ v: 'KICKS DE JUEGO', s: SUB }],
+    [{ v: 'Concepto', s: HDR }, { v: teamA, s: HDR }, { v: teamB, s: HDR }, { v: 'Total', s: HDR }],
+    [{ v: 'A seguir', s: LBL }, { v: aKickS, s: RED }, { v: bKickS, s: BLUE }, { v: aKickS+bKickS, s: NEUTRAL }],
+    [{ v: 'Sale lateral', s: LBL }, { v: aKickT, s: RED }, { v: bKickT, s: BLUE }, { v: aKickT+bKickT, s: NEUTRAL }],
+    [{ v: 'Directo', s: LBL }, { v: aKickD, s: RED }, { v: bKickD, s: BLUE }, { v: aKickD+bKickD, s: NEUTRAL }],
+    [{ v: 'TOTAL kicks', s: ACCENT }, { v: aKickS+aKickT+aKickD, s: RED }, { v: bKickS+bKickT+bKickD, s: BLUE }, { v: aKickS+aKickT+aKickD+bKickS+bKickT+bKickD, s: NEUTRAL }],
+  ];
+  const penMerges = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } },
+    { s: { r: 8, c: 0 }, e: { r: 8, c: 3 } },
+    { s: { r: 13, c: 0 }, e: { r: 13, c: 3 } },
+    { s: { r: 21, c: 0 }, e: { r: 21, c: 3 } },
+  ];
+  wb.SheetNames.push('Penales y Pérdidas');
+  wb.Sheets['Penales y Pérdidas'] = buildSheet(penData, penMerges, [38, 16, 16, 14]);
+
+  // ==================== HOJA 5: MAPA DE CANCHA ====================
+  // Always from Local team (Team A) perspective
+  // Z1 = ingoal A (defending), Z2 = 22m A, Z3 = 40m A, Z4 = 40m B, Z5 = 22m B, Z6 = ingoal B (attacking)
+  // Events stored already from each team's POV. Need to "flip" Team B events because they
+  // were registered from B's perspective but we want everything from A's.
+  // For events with autoZone (Try -> Z6 from each team's POV):
+  //   - Team A try in Z6 stays Z6 (A's attacking ingoal = B's ingoal physically) ✓
+  //   - Team B try in Z6 should become Z1 from A's perspective (B's attacking ingoal = A's ingoal physically)
+  // For manually-zoned events from B: zone needs to be flipped (Z1<->Z6, Z2<->Z5, Z3<->Z4)
+  const flipZone = z => 7 - z; // 1->6, 2->5, 3->4, 4->3, 5->2, 6->1
+
+  const zonesA = [0,0,0,0,0,0]; // A events from A's perspective
+  const zonesB = [0,0,0,0,0,0]; // B events shown from A's perspective (flipped)
+  STATE.events.forEach(e => {
+    if (!e.zone) return;
+    if (e.team === 'A') {
+      zonesA[e.zone - 1]++;
+    } else {
+      // Flip B's zone to A's perspective
+      zonesB[flipZone(e.zone) - 1]++;
+    }
+  });
+
+  // Field-only stats (Z2-Z5)
+  const aField = [zonesA[1], zonesA[2], zonesA[3], zonesA[4]]; // Z2,Z3,Z4,Z5
+  const bField = [zonesB[1], zonesB[2], zonesB[3], zonesB[4]];
+  const aFieldTot = aField.reduce((a,b)=>a+b,0);
+  const bFieldTot = bField.reduce((a,b)=>a+b,0);
+  const aOwnHalf = aField[0] + aField[1]; // Z2+Z3 = own half
+  const aRivalHalf = aField[2] + aField[3]; // Z4+Z5 = rival half
+  const bOwnHalf = bField[2] + bField[3]; // From B's POV their own half = Z4+Z5 from A's POV
+  const bRivalHalf = bField[0] + bField[1]; // B attacking = A's defending zones
+
+  // Tries by location (in-goal zones)
+  const aTriesZ6 = STATE.events.filter(e => e.team === 'A' && e.event === 'try').length;
+  const bTriesZ1 = STATE.events.filter(e => e.team === 'B' && e.event === 'try').length;
+
+  const mapaData = [
+    [{ v: 'MAPA DE CANCHA — ESTADÍSTICAS DE CAMPO', s: TITLE }],
+    [],
+    [{ v: `Cancha vista desde la perspectiva de ${teamA} (izquierda → derecha = ataque). Las zonas Z2 a Z5 son el campo de juego efectivo. Z1 (in-goal ${teamA}) y Z6 (in-goal ${teamB}) son zonas de anotación, no juego de campo.`, s: NOTE }],
+    [],
+    [{ v: 'DIAGRAMA DE CANCHA', s: SUB }],
+    [
+      { v: `← Defiende ${teamA}`, s: { font: { bold: true, sz: 9, color: { rgb: 'C82424' } }, alignment: { horizontal: 'left', indent: 1 } } },
+      null, null, null, null,
+      { v: `Ataca ${teamA} →`, s: { font: { bold: true, sz: 9, color: { rgb: 'C82424' } }, alignment: { horizontal: 'right', indent: 1 } } },
+      null,
+    ],
+    [
+      { v: `Z1\nIn-goal\n${teamA}`, s: { font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' }, name: 'Arial' }, fill: { fgColor: { rgb: '6B7280' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } } },
+      { v: 'Z2\n22m', s: { font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' }, name: 'Arial' }, fill: { fgColor: { rgb: '1D8A4A' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } } },
+      { v: 'Z3\n40m', s: { font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' }, name: 'Arial' }, fill: { fgColor: { rgb: '1D8A4A' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } } },
+      { v: 'Z4\n40m', s: { font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' }, name: 'Arial' }, fill: { fgColor: { rgb: '1D8A4A' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } } },
+      { v: 'Z5\n22m', s: { font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' }, name: 'Arial' }, fill: { fgColor: { rgb: '1D8A4A' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } } },
+      { v: `Z6\nIn-goal\n${teamB}`, s: { font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' }, name: 'Arial' }, fill: { fgColor: { rgb: '6B7280' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } } },
+    ],
+    [],
+    [{ v: 'EVENTOS POR ZONA — CAMPO DE JUEGO (Z2 a Z5)', s: SUB }],
+    [
+      { v: 'Equipo', s: HDR },
+      { v: `Z2 — 22m ${teamA}`, s: HDR }, { v: `Z3 — 40m ${teamA}`, s: HDR },
+      { v: `Z4 — 40m ${teamB}`, s: HDR }, { v: `Z5 — 22m ${teamB}`, s: HDR },
+      { v: 'Total campo', s: HDR }, { v: '% en campo rival', s: HDR },
+    ],
+    [
+      { v: teamA, s: LBL_BOLD },
+      { v: aField[0], s: RED }, { v: aField[1], s: RED }, { v: aField[2], s: RED }, { v: aField[3], s: RED },
+      { v: aFieldTot, s: ACCENT },
+      { v: aFieldTot ? aRivalHalf/aFieldTot : 0, s: { ...RED, numFmt: '0%' } },
+    ],
+    [
+      { v: teamB, s: LBL_BOLD },
+      { v: bField[0], s: BLUE }, { v: bField[1], s: BLUE }, { v: bField[2], s: BLUE }, { v: bField[3], s: BLUE },
+      { v: bFieldTot, s: ACCENT },
+      { v: bFieldTot ? bRivalHalf/bFieldTot : 0, s: { ...BLUE, numFmt: '0%' } },
+    ],
+    [
+      { v: 'Total por zona', s: ACCENT },
+      { v: aField[0]+bField[0], s: ACCENT }, { v: aField[1]+bField[1], s: ACCENT },
+      { v: aField[2]+bField[2], s: ACCENT }, { v: aField[3]+bField[3], s: ACCENT },
+      { v: aFieldTot+bFieldTot, s: ACCENT }, { v: '', s: ACCENT },
+    ],
+    [],
+    [{ v: 'TERRITORIO DOMINADO — Mitades de cancha', s: SUB }],
+    [
+      { v: 'Equipo', s: HDR }, { v: 'En su mitad', s: HDR }, { v: 'En mitad rival', s: HDR },
+      { v: 'Total campo', s: HDR }, { v: '% en mitad rival', s: HDR },
+    ],
+    [
+      { v: teamA, s: LBL_BOLD },
+      { v: aOwnHalf, s: RED }, { v: aRivalHalf, s: RED }, { v: aFieldTot, s: RED },
+      { v: aFieldTot ? aRivalHalf/aFieldTot : 0, s: { ...RED, numFmt: '0%' } },
+    ],
+    [
+      { v: teamB, s: LBL_BOLD },
+      { v: bOwnHalf, s: BLUE }, { v: bRivalHalf, s: BLUE }, { v: bFieldTot, s: BLUE },
+      { v: bFieldTot ? bRivalHalf/bFieldTot : 0, s: { ...BLUE, numFmt: '0%' } },
+    ],
+    [],
+    [{ v: 'PRESIÓN EN ZONAS DE 22 METROS', s: SUB }],
+    [
+      { v: 'Equipo', s: HDR }, { v: 'En su 22m (defendiendo)', s: HDR },
+      { v: 'En 22m rival (atacando)', s: HDR }, { v: 'Ratio ataque/defensa', s: HDR },
+    ],
+    [
+      { v: teamA, s: LBL_BOLD },
+      { v: aField[0], s: RED }, // Z2 = teamA's 22m
+      { v: aField[3], s: RED }, // Z5 = teamB's 22m
+      { v: aField[0] ? aField[3]/aField[0] : 0, s: { ...RED, numFmt: '0.00' } },
+    ],
+    [
+      { v: teamB, s: LBL_BOLD },
+      { v: bField[3], s: BLUE }, // Z5 = teamB's own 22m (their defensive zone)
+      { v: bField[0], s: BLUE }, // Z2 = teamA's 22m (their attack)
+      { v: bField[3] ? bField[0]/bField[3] : 0, s: { ...BLUE, numFmt: '0.00' } },
+    ],
+    [],
+    [{ v: 'ZONAS DE ANOTACIÓN (in-goals)', s: SUB }],
+    [
+      { v: 'Tries anotados por', s: HDR },
+      { v: `En in-goal de ${teamA} (Z1)`, s: HDR },
+      { v: `En in-goal de ${teamB} (Z6)`, s: HDR },
+      { v: 'Total tries', s: HDR },
+    ],
+    [
+      { v: teamA, s: LBL_BOLD },
+      { v: 0, s: RED }, { v: aTriesZ6, s: RED }, { v: aTriesZ6, s: RED },
+    ],
+    [
+      { v: teamB, s: LBL_BOLD },
+      { v: bTriesZ1, s: BLUE }, { v: 0, s: BLUE }, { v: bTriesZ1, s: BLUE },
+    ],
+  ];
+  const mapaMerges = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } },
+    { s: { r: 4, c: 0 }, e: { r: 4, c: 6 } },
+    { s: { r: 5, c: 0 }, e: { r: 5, c: 4 } }, // ← Defiende
+    { s: { r: 5, c: 5 }, e: { r: 5, c: 6 } }, // Ataca →
+    { s: { r: 8, c: 0 }, e: { r: 8, c: 6 } },
+    { s: { r: 15, c: 0 }, e: { r: 15, c: 6 } },
+    { s: { r: 21, c: 0 }, e: { r: 21, c: 6 } },
+    { s: { r: 27, c: 0 }, e: { r: 27, c: 6 } },
+  ];
+  // Row heights for the diagram row
+  const mapaRowHeights = [];
+  mapaRowHeights[0] = { hpt: 28 };
+  mapaRowHeights[2] = { hpt: 36 };
+  mapaRowHeights[6] = { hpt: 50 };
+  mapaRowHeights[9] = { hpt: 32 };
+
+  wb.SheetNames.push('Mapa de Cancha');
+  wb.Sheets['Mapa de Cancha'] = buildSheet(mapaData, mapaMerges, [22, 16, 16, 16, 16, 16, 22], mapaRowHeights);
+
+  // ==================== HOJA 6: EVENTOS RAW ====================
+  const rawHeader = ['ID', 'Fecha/Hora', 'Partido', 'Tiempo', 'Equipo', 'Evento', 'Resultado', 'Zona', 'Descripción Zona', 'Puntos'];
+  const rawData = [
+    [{ v: 'EVENTOS REGISTRADOS — DETALLE', s: TITLE }],
+    [],
+    rawHeader.map(h => ({ v: h, s: HDR })),
+  ];
+  STATE.events.forEach(e => {
+    rawData.push([
+      { v: e.id, s: LBL },
+      { v: new Date(e.timestamp).toLocaleString('es-AR'), s: LBL },
+      { v: e.match, s: LBL },
+      { v: e.half + 'T', s: NEUTRAL },
+      { v: e.teamName, s: e.team === 'A' ? RED : BLUE },
+      { v: e.eventName, s: LBL },
+      { v: e.outcomeLabel || e.outcome || '', s: LBL },
+      { v: e.zone, s: NEUTRAL },
+      { v: e.zoneDesc, s: LBL },
+      { v: e.score || 0, s: NEUTRAL },
+    ]);
+  });
+  const rawMerges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } }];
+  wb.SheetNames.push('Eventos');
+  wb.Sheets['Eventos'] = buildSheet(rawData, rawMerges, [16, 18, 18, 8, 16, 14, 28, 8, 18, 10]);
+
+  // ==================== EXPORT ====================
+  const filename = `rugby-stats-${matchName.replace(/[^a-zA-Z0-9]/g,'_')}-${new Date().toISOString().slice(0,10)}.xlsx`;
+
   try {
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 100);
-    downloaded = true;
-  } catch(e) { console.warn('Blob download failed', e); }
-
-  // Always show fallback modal regardless — gives user the option to copy or share
-  showCSVFallback(csv, filename);
-  if (downloaded) showToast('Si no se descargó, copiá el texto', 'success');
-}
-
-function showCSVFallback(csv, filename) {
-  const modal = document.getElementById('csv-fallback-modal');
-  document.getElementById('csv-content').value = csv;
-  document.getElementById('csv-filename').textContent = filename;
-  openModal('csv-fallback-modal');
-}
-
-async function copyCSV() {
-  const text = document.getElementById('csv-content').value;
-  try {
-    await navigator.clipboard.writeText(text);
-    showToast('✓ CSV copiado al portapapeles', 'success');
+    XLSX.writeFile(wb, filename);
+    showToast('✓ Excel descargado', 'success');
   } catch(e) {
-    // Fallback: select the textarea
-    const ta = document.getElementById('csv-content');
-    ta.select();
-    ta.setSelectionRange(0, 99999);
+    console.error('Direct write failed', e);
+    // Fallback: build blob and offer share
     try {
-      document.execCommand('copy');
-      showToast('✓ CSV copiado', 'success');
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      showXLSXFallback(blob, filename);
     } catch(e2) {
-      showToast('Tocá el texto y copialo manualmente', 'error');
+      showToast('Error generando Excel', 'error');
     }
   }
 }
 
-async function shareCSV() {
-  const text = document.getElementById('csv-content').value;
-  const filename = document.getElementById('csv-filename').textContent;
+let _pendingXLSXBlob = null;
+let _pendingXLSXFilename = '';
+function showXLSXFallback(blob, filename) {
+  _pendingXLSXBlob = blob;
+  _pendingXLSXFilename = filename;
+  document.getElementById('xlsx-filename').textContent = filename;
+  openModal('xlsx-fallback-modal');
+}
+
+async function shareXLSX() {
+  if (!_pendingXLSXBlob) {
+    // Generate fresh blob
+    if (typeof XLSX === 'undefined') { showToast('Librería no disponible', 'error'); return; }
+    showToast('Generando archivo...', 'success');
+    downloadXLSX();
+    return;
+  }
   if (navigator.share) {
     try {
-      // Try sharing as file first
-      const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' });
-      const file = new File([blob], filename, { type: 'text/csv' });
+      const file = new File([_pendingXLSXBlob], _pendingXLSXFilename,
+        { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Rugby Stats CSV' });
+        await navigator.share({ files: [file], title: 'Rugby Stats' });
         return;
       }
-      // Fallback: share as text
-      await navigator.share({ title: filename, text: text });
     } catch(e) {
       if (e.name !== 'AbortError') showToast('No se pudo compartir', 'error');
+      return;
     }
-  } else {
-    showToast('Compartir no disponible — copiá el texto', 'error');
+  }
+  // Last-resort: trigger blob URL download
+  try {
+    const url = URL.createObjectURL(_pendingXLSXBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = _pendingXLSXFilename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    showToast('✓ Descarga iniciada', 'success');
+  } catch(e) {
+    showToast('No se pudo descargar', 'error');
   }
 }
 
