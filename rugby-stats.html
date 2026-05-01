@@ -1,0 +1,1900 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Rugby Live Stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0e14;
+  --bg-2: #0f1520;
+  --surface: #141b26;
+  --surface-2: #1a2330;
+  --surface-3: #202a3a;
+  --border: #253142;
+  --border-bright: #384658;
+  --text: #e8ecf1;
+  --text-dim: #8b9cb3;
+  --text-mute: #5a6b82;
+  --team-a: #e43d3d;
+  --team-a-dim: #7a2020;
+  --team-a-bg: rgba(228, 61, 61, 0.14);
+  --team-b: #3d8de4;
+  --team-b-dim: #204e7a;
+  --team-b-bg: rgba(61, 141, 228, 0.14);
+  --field: #1d8a4a;
+  --field-dark: #0e5b30;
+  --accent: #fbbf24;
+  --accent-dim: #92700f;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warn: #f59e0b;
+  --display: 'Bebas Neue', sans-serif;
+  --body: 'Archivo', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 14px;
+  min-height: 100vh;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  background-image:
+    radial-gradient(ellipse at 15% -5%, rgba(228, 61, 61, 0.08), transparent 45%),
+    radial-gradient(ellipse at 85% -5%, rgba(61, 141, 228, 0.08), transparent 45%);
+  padding-bottom: 96px;
+}
+
+/* Header */
+.header {
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(10, 14, 20, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+}
+.header-inner { display: flex; align-items: center; gap: 10px; max-width: 900px; margin: 0 auto; }
+.logo {
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  flex: 1;
+  line-height: 1;
+}
+.logo-accent { color: var(--text); }
+
+.mini-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.mini-score .sep { color: var(--text-mute); }
+.mini-score .a { color: var(--team-a); }
+.mini-score .b { color: var(--team-b); }
+
+.icon-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+}
+.icon-btn:active { transform: scale(0.94); }
+
+/* Team toggle */
+.team-toggle {
+  max-width: 900px;
+  margin: 12px auto 0;
+  padding: 0 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.team-btn {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: all 0.15s;
+  text-align: left;
+  color: var(--text);
+}
+.team-btn .tb-label {
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--text-mute);
+  margin-bottom: 2px;
+}
+.team-btn .tb-name {
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 1.5px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.team-btn .tb-score {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+}
+.team-btn.a .tb-name { color: var(--team-a); }
+.team-btn.a .tb-score { color: var(--team-a); }
+.team-btn.b .tb-name { color: var(--team-b); }
+.team-btn.b .tb-score { color: var(--team-b); }
+.team-btn.a.active {
+  background: var(--team-a-bg);
+  border-color: var(--team-a);
+  box-shadow: 0 0 0 3px rgba(228, 61, 61, 0.15);
+}
+.team-btn.b.active {
+  background: var(--team-b-bg);
+  border-color: var(--team-b);
+  box-shadow: 0 0 0 3px rgba(61, 141, 228, 0.15);
+}
+.team-btn:active { transform: scale(0.98); }
+
+/* Match meta */
+.match-meta {
+  max-width: 900px;
+  margin: 8px auto 0;
+  padding: 0 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.half-toggle {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.half-toggle button {
+  background: transparent;
+  border: none;
+  color: var(--text-mute);
+  padding: 5px 11px;
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.half-toggle button.active {
+  background: var(--accent);
+  color: #000;
+}
+
+/* Section titles */
+.section-title {
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  color: var(--text-mute);
+  margin: 18px auto 8px;
+  padding: 0 14px;
+  max-width: 900px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+}
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--border), transparent);
+}
+.step-num {
+  background: var(--accent);
+  color: #000;
+  min-width: 18px; height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.step-num.done { background: var(--success); color: #fff; }
+.step-num.wait { background: var(--surface-2); color: var(--text-mute); border: 1px solid var(--border); }
+
+/* Field */
+.field-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 14px;
+}
+.field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.field-dir b { color: var(--accent); font-weight: 700; }
+
+.field {
+  position: relative;
+  background: linear-gradient(180deg, var(--field) 0%, var(--field-dark) 100%);
+  border-radius: 12px;
+  padding: 10px;
+  border: 2px solid rgba(255,255,255,0.08);
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 50%, rgba(0,0,0,0.12) 100%),
+    linear-gradient(180deg, var(--field) 0%, var(--field-dark) 100%);
+}
+.zones {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 5px;
+}
+.zone {
+  background: rgba(0,0,0,0.22);
+  border: 2px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 10px 4px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 82px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.zone::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent);
+  pointer-events: none;
+}
+.zone.danger { background: rgba(239, 68, 68, 0.22); border-color: rgba(239, 68, 68, 0.35); }
+.zone.attack { background: rgba(34, 197, 94, 0.22); border-color: rgba(34, 197, 94, 0.35); }
+.zone:active { transform: scale(0.95); }
+.zone.selected {
+  background: var(--accent);
+  border-color: #fff;
+  color: #000;
+}
+.zone.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 3px; right: 5px;
+  font-size: 10px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.6);
+}
+.zone-num {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 3px;
+  letter-spacing: 1px;
+}
+.zone.selected .zone-num { color: rgba(0,0,0,0.65); }
+.zone-label {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: rgba(255,255,255,0.95);
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+.zone.selected .zone-label { color: rgba(0,0,0,0.78); }
+
+/* Selection bar */
+.selection-bar {
+  max-width: 900px;
+  margin: 8px auto 0;
+  padding: 0 14px;
+}
+.selection-inner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+}
+.sel-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+.sel-label {
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  color: var(--text-mute);
+}
+.pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 1px solid transparent;
+}
+.pill.team-a { background: var(--team-a-bg); color: var(--team-a); border-color: var(--team-a-dim); }
+.pill.team-b { background: var(--team-b-bg); color: var(--team-b); border-color: var(--team-b-dim); }
+.pill.zone { background: rgba(251, 191, 36, 0.14); color: var(--accent); border-color: var(--accent-dim); }
+.pill.empty { background: var(--surface-2); color: var(--text-mute); border-color: var(--border); }
+.clear-zone {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-mute);
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.clear-zone:hover { color: var(--text); border-color: var(--border-bright); }
+
+/* Events grid */
+.events-grid {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 14px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.event-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 4px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 62px;
+}
+.event-btn:active { transform: scale(0.96); }
+.event-btn:hover { border-color: var(--border-bright); background: var(--surface-2); }
+.event-btn.disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.5);
+}
+.event-btn.score {
+  border-color: var(--accent-dim);
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.10), var(--surface));
+}
+.event-btn.score:hover { border-color: var(--accent); }
+.event-btn.danger {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08), var(--surface));
+}
+.event-btn.danger:hover { border-color: var(--danger); }
+.event-btn.attack {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.08), var(--surface));
+}
+.event-btn.attack:hover { border-color: var(--success); }
+.event-icon {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-dim);
+}
+.event-btn.score .event-icon { color: var(--accent); }
+.event-btn.danger .event-icon { color: var(--danger); }
+.event-btn.attack .event-icon { color: var(--success); }
+.event-name {
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.8px;
+  text-align: center;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.events-hint {
+  max-width: 900px;
+  margin: 8px auto 0;
+  padding: 8px 14px 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-mute);
+  letter-spacing: 0.3px;
+}
+
+/* Stats panel */
+.stats-panel {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 14px;
+}
+.stats-toggle {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.stats-toggle .chev { transition: transform 0.2s; color: var(--text-mute); }
+.stats-toggle.open .chev { transform: rotate(180deg); }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.stat-label {
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--text-mute);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.stat-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 12px;
+}
+.stat-row .a { color: var(--team-a); text-align: left; }
+.stat-row .b { color: var(--team-b); text-align: right; }
+.stat-row .val { font-family: var(--mono); font-weight: 700; font-size: 13px; }
+.stat-row .lbl { color: var(--text-dim); text-align: center; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+  margin-top: 5px;
+}
+.heat-cell {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.heatmap-labels {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+  margin-top: 3px;
+  font-size: 8.5px;
+  color: var(--text-mute);
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Bottom bar */
+.bottom-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(10, 14, 20, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 7px;
+  z-index: 9;
+}
+.bar-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 1px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.bar-btn-icon { font-size: 16px; line-height: 1; }
+.bar-btn:active { transform: scale(0.96); }
+.bar-btn.primary {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+  font-weight: 800;
+}
+
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 14px;
+  animation: fadeIn 0.15s;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.2s;
+  margin-bottom: env(safe-area-inset-bottom);
+}
+@keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+.modal-back {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-mute);
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.modal-back:hover { color: var(--text); border-color: var(--border-bright); }
+.modal-title {
+  font-family: var(--display);
+  font-size: 16px;
+  letter-spacing: 1.2px;
+  color: var(--accent);
+  flex: 1;
+  line-height: 1.2;
+}
+.modal-body { padding: 14px 16px 18px; }
+
+.ctx-strip {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+/* Outcome grid */
+.outcome-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.outcome-grid.cols-1 { grid-template-columns: 1fr; }
+.outcome-grid.cols-3 { grid-template-columns: repeat(2, 1fr); }
+.outcome-btn {
+  padding: 18px 12px;
+  border-radius: 12px;
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border: 2px solid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: center;
+  line-height: 1.1;
+}
+.outcome-btn .oc-hint {
+  font-family: var(--body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text-mute);
+  text-transform: none;
+}
+.outcome-btn.won { border-color: var(--success); color: var(--success); background: rgba(34,197,94,0.08); }
+.outcome-btn.won .oc-hint { color: rgba(34,197,94,0.7); }
+.outcome-btn.lost { border-color: var(--danger); color: var(--danger); background: rgba(239,68,68,0.08); }
+.outcome-btn.lost .oc-hint { color: rgba(239,68,68,0.7); }
+.outcome-btn.warn { border-color: var(--warn); color: var(--warn); background: rgba(245,158,11,0.08); }
+.outcome-btn.neutral { border-color: var(--border-bright); color: var(--text); }
+.outcome-btn.score { border-color: var(--accent); color: var(--accent); background: rgba(251,191,36,0.10); }
+.outcome-btn.score .oc-hint { color: rgba(251,191,36,0.7); }
+.outcome-btn:active { transform: scale(0.96); }
+
+/* Settings */
+.field-group { margin-bottom: 14px; }
+.field-group label {
+  display: block;
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--text-mute);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+.field-group input, .field-group textarea {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 13px;
+}
+.field-group input:focus, .field-group textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.btn {
+  padding: 10px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.btn.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 800; }
+.btn.danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.code-block {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--text-dim);
+  max-height: 180px;
+  overflow-y: auto;
+}
+.help-text {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 6px 0 10px;
+}
+
+/* History */
+.event-list { display: flex; flex-direction: column; gap: 5px; max-height: 65vh; overflow-y: auto; }
+.event-item {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 9px 11px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 9px;
+  align-items: center;
+  font-size: 12px;
+}
+.event-time { font-family: var(--mono); font-size: 10.5px; color: var(--text-mute); text-align: center; line-height: 1.3; }
+.sync-mark { font-size: 8px; color: var(--success); }
+.sync-mark.pending { color: var(--warn); }
+.event-desc { overflow: hidden; font-size: 12px; }
+.event-desc .muted { color: var(--text-mute); font-size: 10.5px; }
+.team-indicator { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.team-name-sm { font-weight: 800; letter-spacing: 0.3px; }
+.event-del {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-mute);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+.event-del:hover { color: var(--danger); border-color: var(--danger); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  top: 70px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  z-index: 200;
+  animation: toastIn 0.2s;
+  max-width: calc(100% - 32px);
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+@keyframes toastIn {
+  from { transform: translate(-50%, -12px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+.toast.success { border-color: var(--success); color: var(--success); }
+.toast.error { border-color: var(--danger); color: var(--danger); }
+
+.empty { text-align: center; padding: 32px 16px; color: var(--text-mute); font-size: 12.5px; }
+.hidden { display: none !important; }
+
+.warning-banner {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 11px;
+  margin: 10px auto 0;
+  max-width: 868px;
+  margin-left: auto;
+  margin-right: auto;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+@media (min-width: 768px) {
+  .events-grid { grid-template-columns: repeat(5, 1fr); }
+  .outcome-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">🏉 RUGBY <span class="logo-accent">STATS</span></div>
+    <div class="mini-score">
+      <span class="a" id="mini-a">0</span>
+      <span class="sep">·</span>
+      <span class="b" id="mini-b">0</span>
+    </div>
+    <button class="icon-btn" id="btn-settings" title="Configuración">⚙</button>
+  </div>
+</header>
+
+<div class="warning-banner hidden" id="warn-config">
+  ⚠ Configurá los equipos y la URL del Google Sheet en el ícono de arriba
+</div>
+
+<!-- Step 1: Team -->
+<div class="section-title"><span class="step-num">1</span> EQUIPO EN POSESIÓN</div>
+<div class="team-toggle">
+  <button class="team-btn a active" id="team-a-btn">
+    <div class="tb-label">EQUIPO A</div>
+    <div class="tb-name" id="team-a-name">Equipo A</div>
+    <div class="tb-score" id="team-a-score">0</div>
+  </button>
+  <button class="team-btn b" id="team-b-btn">
+    <div class="tb-label">EQUIPO B</div>
+    <div class="tb-name" id="team-b-name">Equipo B</div>
+    <div class="tb-score" id="team-b-score">0</div>
+  </button>
+</div>
+<div class="match-meta">
+  <div id="match-info">🏟 <span id="match-name">Partido sin nombre</span></div>
+  <div class="half-toggle">
+    <button id="half-1" class="active">1T</button>
+    <button id="half-2">2T</button>
+  </div>
+</div>
+
+<!-- Step 2: Zone -->
+<div class="section-title"><span class="step-num" id="step-zone-num">2</span> ZONA DE CANCHA</div>
+<div class="field-wrap">
+  <div class="field-header">
+    <div>Vista desde <b id="attack-team">Equipo A</b></div>
+    <div class="field-dir">Ataque →</div>
+  </div>
+  <div class="field">
+    <div class="zones" id="zones"></div>
+  </div>
+</div>
+
+<!-- Selection -->
+<div class="selection-bar">
+  <div class="selection-inner">
+    <div class="sel-left">
+      <span class="sel-label">REGISTRAR:</span>
+      <span class="pill team-a" id="sel-team">EQUIPO A</span>
+      <span class="pill empty" id="sel-zone">Sin zona</span>
+    </div>
+    <button class="clear-zone hidden" id="btn-clear-zone">Limpiar</button>
+  </div>
+</div>
+
+<!-- Step 3: Event -->
+<div class="section-title"><span class="step-num" id="step-event-num">3</span> EVENTO</div>
+<div class="events-grid" id="events-grid"></div>
+<div class="events-hint" id="events-hint">Tocá una zona de la cancha para habilitar los eventos</div>
+
+<!-- Stats -->
+<div class="section-title">📊 ESTADÍSTICAS EN VIVO</div>
+<div class="stats-panel">
+  <button class="stats-toggle" id="stats-toggle">
+    <span>VER ESTADÍSTICAS</span>
+    <span class="chev">▾</span>
+  </button>
+  <div class="stats-grid hidden" id="stats-grid"></div>
+</div>
+
+<div class="bottom-bar">
+  <button class="bar-btn" id="btn-undo"><span class="bar-btn-icon">↶</span>DESHACER</button>
+  <button class="bar-btn" id="btn-history"><span class="bar-btn-icon">☰</span>HISTORIAL</button>
+  <button class="bar-btn primary" id="btn-sync"><span class="bar-btn-icon">⬆</span><span id="sync-label">GUARDAR</span></button>
+</div>
+
+<!-- Outcome modal -->
+<div class="modal-backdrop hidden" id="outcome-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="modal-back hidden" id="modal-back">←</button>
+      <div class="modal-title" id="outcome-title">RESULTADO</div>
+      <button class="icon-btn" onclick="closeModal('outcome-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ctx-strip">
+        <span class="pill" id="oc-team-pill">EQUIPO</span>
+        <span class="pill zone" id="oc-zone-pill">ZONA</span>
+      </div>
+      <div class="outcome-grid" id="outcome-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-backdrop hidden" id="settings-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⚙ CONFIGURACIÓN</div>
+      <button class="icon-btn" onclick="closeModal('settings-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label>Nombre del partido</label>
+        <input type="text" id="cfg-match" placeholder="Ej: Final Torneo URBA">
+      </div>
+      <div class="field-group">
+        <label>Equipo A (izquierda)</label>
+        <input type="text" id="cfg-team-a" placeholder="Ej: Hindú">
+      </div>
+      <div class="field-group">
+        <label>Equipo B (derecha)</label>
+        <input type="text" id="cfg-team-b" placeholder="Ej: CASI">
+      </div>
+      <div class="field-group">
+        <label>URL de Google Apps Script</label>
+        <input type="text" id="cfg-sheet-url" placeholder="https://script.google.com/macros/s/.../exec">
+        <div class="help-text">
+          Pegá la URL de tu Web App de Google Apps Script. El código está abajo.
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Código Apps Script</label>
+        <div class="help-text">
+          1. Google Sheet nuevo → Extensiones → Apps Script<br>
+          2. Pegá este código y guardá<br>
+          3. Deploy → Web App → Ejecutar como "yo", Acceso "Cualquiera"<br>
+          4. Copiá la URL y pegala arriba
+        </div>
+        <pre class="code-block" id="apps-script-code"></pre>
+        <button class="btn" style="margin-top:6px" id="btn-copy-script">📋 COPIAR CÓDIGO</button>
+      </div>
+      <div class="btn-row" style="margin-top:16px">
+        <button class="btn primary" onclick="saveSettings()">GUARDAR</button>
+        <button class="btn danger" id="btn-reset">⚠ RESET PARTIDO</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- History modal -->
+<div class="modal-backdrop hidden" id="history-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">☰ HISTORIAL DE EVENTOS</div>
+      <button class="icon-btn" onclick="closeModal('history-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="event-list" id="event-list"></div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn" onclick="downloadCSV()">⬇ EXPORTAR CSV</button>
+        <button class="btn primary" onclick="syncNow(); closeModal('history-modal')">⬆ SYNC</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CSV fallback modal -->
+<div class="modal-backdrop hidden" id="csv-fallback-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⬇ EXPORTAR DATOS</div>
+      <button class="icon-btn" onclick="closeModal('csv-fallback-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="help-text">
+        Si el archivo no se descargó automáticamente, usá <b>Compartir</b> para enviarlo
+        a vos mismo (WhatsApp, email, Drive) o <b>Copiar</b> y pegarlo en una nota.
+      </div>
+      <div class="field-group">
+        <label>Nombre sugerido</label>
+        <div style="font-family: var(--mono); font-size: 12px; color: var(--accent); padding: 6px 0;" id="csv-filename"></div>
+      </div>
+      <div class="field-group">
+        <label>Contenido CSV</label>
+        <textarea id="csv-content" readonly style="height: 180px; font-family: var(--mono); font-size: 10px; resize: vertical;"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="shareCSV()">📤 COMPARTIR</button>
+        <button class="btn" onclick="copyCSV()">📋 COPIAR</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== STATE ====================
+const STATE = {
+  config: { matchName: '', teamA: 'Equipo A', teamB: 'Equipo B', sheetUrl: '' },
+  currentTeam: 'A',
+  currentZone: null,
+  currentHalf: 1,
+  events: [],
+  syncedIds: new Set(),
+  modalPath: []  // breadcrumb for drilldown
+};
+
+// ==================== DEFINITIONS ====================
+// Each outcome is: { id, label, cls, score?, hint?, sub?, outcomeId? }
+// - sub: array of nested outcomes (drill-down)
+// - outcomeId: ID stored in event record; defaults to id (combined when nested)
+const EVENT_DEFS = [
+  {
+    id: 'cajon', name: 'Cajón', icon: '▤', category: 'setpiece',
+    outcomes: [
+      { id: 'ganado',  label: 'GANADO',  cls: 'won',  hint: 'avanzó / mantuvo' },
+      { id: 'perdido', label: 'PERDIDO', cls: 'lost' }
+    ]
+  },
+  {
+    id: 'drop', name: 'Drop', icon: '◆', category: 'score',
+    outcomes: [
+      { id: 'convertido', label: 'CONVERTIDO', cls: 'score', hint: '+3 puntos', score: 3 },
+      { id: 'errado',     label: 'ERRADO',     cls: 'lost' }
+    ]
+  },
+  {
+    id: 'freekick', name: 'Free Kick', icon: '↳', category: 'penal',
+    outcomes: [
+      {
+        id: 'favor', label: 'A FAVOR', cls: 'won',
+        sub: [
+          { id: 'tap',   label: 'TAP',   cls: 'neutral' },
+          { id: 'scrum', label: 'SCRUM', cls: 'neutral' },
+          { id: 'kick',  label: 'KICK',  cls: 'neutral' }
+        ]
+      },
+      { id: 'recibido', label: 'RECIBIDO', cls: 'lost' }
+    ]
+  },
+  {
+    id: 'kick', name: 'Kick', icon: '→', category: 'kick',
+    outcomes: [
+      { id: 'aseguir',  label: 'A SEGUIR',     cls: 'won',  hint: 'queda en juego' },
+      { id: 'touch',    label: 'SALE LATERAL', cls: 'neutral', hint: 'line para rival' },
+      { id: 'directo',  label: 'DIRECTO',      cls: 'lost', hint: 'sale sin pique' }
+    ]
+  },
+  {
+    id: 'knockon', name: 'Knock On', icon: '⇣', category: 'penal',
+    outcomes: [
+      { id: 'favor',    label: 'A FAVOR',   cls: 'won',  hint: 'lo hizo el rival' },
+      { id: 'encontra', label: 'EN CONTRA', cls: 'lost', hint: 'lo hicimos nosotros' }
+    ]
+  },
+  {
+    id: 'line', name: 'Line', icon: '▦', category: 'setpiece',
+    outcomes: [
+      { id: 'ganado',  label: 'GANADO',  cls: 'won' },
+      { id: 'perdido', label: 'PERDIDO', cls: 'lost' },
+      { id: 'robado',  label: 'ROBADO',  cls: 'won', hint: 'recuperado al rival' }
+    ]
+  },
+  {
+    id: 'maul', name: 'Maul', icon: '◎', category: 'setpiece',
+    outcomes: [
+      { id: 'ganado',  label: 'GANADO',  cls: 'won' },
+      { id: 'perdido', label: 'PERDIDO', cls: 'lost' }
+    ]
+  },
+  {
+    id: 'penal', name: 'Penal', icon: '◈', category: 'penal',
+    outcomes: [
+      {
+        id: 'favor', label: 'A FAVOR', cls: 'won', hint: 'cobrado a nosotros',
+        sub: [
+          { id: 'palos_conv', label: 'PALOS ✓',   cls: 'score', hint: '+3 puntos', score: 3 },
+          { id: 'palos_err',  label: 'PALOS ✗',   cls: 'lost',  hint: 'errado' },
+          { id: 'al_line',    label: 'AL LINE',   cls: 'neutral', hint: 'buscó lateral' },
+          { id: 'scrum',      label: 'SCRUM',     cls: 'neutral', hint: 'eligió scrum' },
+          { id: 'tap',        label: 'TAP & GO',  cls: 'neutral', hint: 'jugó rápido' },
+          { id: 'kick_seg',   label: 'KICK A SEGUIR', cls: 'neutral', hint: 'pateó a jugar' }
+        ]
+      },
+      { id: 'recibido', label: 'RECIBIDO', cls: 'lost', hint: 'infracción en contra' }
+    ]
+  },
+  {
+    id: 'perdida', name: 'Pérdida', icon: '⊗', category: 'penal',
+    outcomes: [
+      { id: 'intercept', label: 'INTERCEPT',       cls: 'lost', hint: 'pase interceptado' },
+      { id: 'forward',   label: 'PASE ADELANTADO', cls: 'lost', hint: 'forward pass' },
+      { id: 'tackle',    label: 'EN EL TACKLE',    cls: 'lost', hint: 'perdió en contacto' },
+      { id: 'otro',      label: 'OTRO',            cls: 'neutral' }
+    ]
+  },
+  {
+    id: 'quiebre', name: 'Quiebre', icon: '⟫', category: 'attack',
+    outcomes: [
+      { id: 'contry',     label: 'CON TRY',         cls: 'score',   hint: 'terminó en try' },
+      { id: 'continuid',  label: 'CONTINUIDAD',     cls: 'won',     hint: 'siguió la jugada' },
+      { id: 'placado',    label: 'PLACADO',         cls: 'neutral', hint: 'lo cortaron' }
+    ]
+  },
+  {
+    id: 'ruck', name: 'Ruck', icon: '◉', category: 'setpiece',
+    outcomes: [
+      { id: 'ganado',   label: 'GANADO',   cls: 'won' },
+      { id: 'perdido',  label: 'PERDIDO',  cls: 'lost' },
+      { id: 'turnover', label: 'TURNOVER', cls: 'warn' }
+    ]
+  },
+  {
+    id: 'scrum', name: 'Scrum', icon: '⬢', category: 'setpiece',
+    outcomes: [
+      { id: 'ganado',  label: 'GANADO',  cls: 'won' },
+      { id: 'perdido', label: 'PERDIDO', cls: 'lost' },
+      { id: 'robado',  label: 'ROBADO',  cls: 'won', hint: 'recuperado al rival' }
+    ]
+  },
+  {
+    id: 'try', name: 'Try', icon: '★', category: 'score', autoZone: 6,
+    outcomes: [
+      { id: 'try5',     label: 'TRY',        cls: 'score', hint: '5 puntos', score: 5 },
+      { id: 'try7',     label: 'TRY + CONV', cls: 'score', hint: '7 puntos', score: 7 },
+      { id: 'trypenal', label: 'TRY PENAL',  cls: 'score', hint: '7 puntos', score: 7 }
+    ]
+  }
+];
+
+const ZONE_DEFS = [
+  { n: 1, label: 'Try\nPropia',  cls: 'danger', meta: '0-22' },
+  { n: 2, label: '22\nPropia',   cls: 'danger', meta: '22-40' },
+  { n: 3, label: '40\nPropia',   cls: '',       meta: '40-50' },
+  { n: 4, label: '40\nRival',    cls: '',       meta: '50-60' },
+  { n: 5, label: '22\nRival',    cls: 'attack', meta: '60-80' },
+  { n: 6, label: 'Try\nRival',   cls: 'attack', meta: '80-100' }
+];
+
+const APPS_SCRIPT_CODE = `function doPost(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const data = JSON.parse(e.postData.contents);
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      'ID','FechaHora','Partido','Tiempo','Equipo',
+      'Evento','Resultado','Zona','ZonaDesc','Puntos'
+    ]);
+  }
+
+  const rows = (data.events || []).map(ev => [
+    ev.id, new Date(ev.timestamp), ev.match, ev.half, ev.teamName,
+    ev.eventName, ev.outcome || '', ev.zone, ev.zoneDesc, ev.score || 0
+  ]);
+  if (rows.length) {
+    sheet.getRange(sheet.getLastRow()+1, 1, rows.length, rows[0].length).setValues(rows);
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ok: true, saved: rows.length}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet() {
+  return ContentService.createTextOutput('Rugby Stats endpoint OK');
+}`;
+
+// ==================== STORAGE ====================
+async function loadState() {
+  const safeGet = async (key) => {
+    try {
+      const r = await window.storage.get(key);
+      return r ? r.value : null;
+    } catch(e) { return null; }
+  };
+  const cfg = await safeGet('config');
+  if (cfg) { try { STATE.config = { ...STATE.config, ...JSON.parse(cfg) }; } catch(e) {} }
+  const evs = await safeGet('events');
+  if (evs) { try { STATE.events = JSON.parse(evs) || []; } catch(e) {} }
+  const sync = await safeGet('syncedIds');
+  if (sync) { try { STATE.syncedIds = new Set(JSON.parse(sync)); } catch(e) {} }
+  const half = await safeGet('currentHalf');
+  if (half) { STATE.currentHalf = parseInt(half) || 1; }
+}
+async function saveKey(key, val) {
+  try { await window.storage.set(key, typeof val === 'string' ? val : JSON.stringify(val)); } catch(e) {}
+}
+const saveConfig = () => saveKey('config', STATE.config);
+const saveEvents = () => saveKey('events', STATE.events);
+const saveSynced = () => saveKey('syncedIds', [...STATE.syncedIds]);
+const saveHalf = () => saveKey('currentHalf', STATE.currentHalf.toString());
+
+// ==================== RENDER ====================
+function render() {
+  renderScoreboard();
+  renderField();
+  renderSelection();
+  renderEvents();
+  renderStats();
+  renderHistory();
+  updateSyncButton();
+  updateStepIndicators();
+  document.getElementById('warn-config').classList.toggle('hidden',
+    !!(STATE.config.sheetUrl && STATE.config.teamA !== 'Equipo A'));
+}
+
+function renderScoreboard() {
+  const scoreA = calculateScore('A');
+  const scoreB = calculateScore('B');
+  document.getElementById('team-a-name').textContent = STATE.config.teamA;
+  document.getElementById('team-b-name').textContent = STATE.config.teamB;
+  document.getElementById('team-a-score').textContent = scoreA;
+  document.getElementById('team-b-score').textContent = scoreB;
+  document.getElementById('mini-a').textContent = scoreA;
+  document.getElementById('mini-b').textContent = scoreB;
+  document.getElementById('match-name').textContent = STATE.config.matchName || 'Partido sin nombre';
+  document.getElementById('team-a-btn').classList.toggle('active', STATE.currentTeam === 'A');
+  document.getElementById('team-b-btn').classList.toggle('active', STATE.currentTeam === 'B');
+  document.getElementById('half-1').classList.toggle('active', STATE.currentHalf === 1);
+  document.getElementById('half-2').classList.toggle('active', STATE.currentHalf === 2);
+  document.getElementById('attack-team').textContent = STATE.currentTeam === 'A' ? STATE.config.teamA : STATE.config.teamB;
+}
+
+function renderField() {
+  const zones = document.getElementById('zones');
+  zones.innerHTML = '';
+  ZONE_DEFS.forEach(zd => {
+    const el = document.createElement('div');
+    el.className = `zone ${zd.cls}`;
+    if (STATE.currentZone === zd.n) el.classList.add('selected');
+    el.innerHTML = `
+      <div class="zone-num">${zd.n}</div>
+      <div class="zone-label">${zd.label.replace('\n','<br>')}</div>`;
+    el.addEventListener('click', () => {
+      STATE.currentZone = zd.n;
+      render();
+    });
+    zones.appendChild(el);
+  });
+}
+
+function renderSelection() {
+  const teamPill = document.getElementById('sel-team');
+  const teamName = STATE.currentTeam === 'A' ? STATE.config.teamA : STATE.config.teamB;
+  teamPill.textContent = teamName;
+  teamPill.className = `pill team-${STATE.currentTeam.toLowerCase()}`;
+
+  const zonePill = document.getElementById('sel-zone');
+  const zd = ZONE_DEFS.find(z => z.n === STATE.currentZone);
+  if (zd) {
+    zonePill.textContent = `Z${zd.n} · ${zd.label.replace('\n',' ')}`;
+    zonePill.className = 'pill zone';
+  } else {
+    zonePill.textContent = 'Sin zona';
+    zonePill.className = 'pill empty';
+  }
+  document.getElementById('btn-clear-zone').classList.toggle('hidden', !zd);
+}
+
+function updateStepIndicators() {
+  const zoneStep = document.getElementById('step-zone-num');
+  const eventStep = document.getElementById('step-event-num');
+  if (STATE.currentZone) {
+    zoneStep.classList.add('done');
+    zoneStep.classList.remove('wait');
+    zoneStep.textContent = '✓';
+    eventStep.classList.remove('wait');
+    eventStep.textContent = '3';
+  } else {
+    zoneStep.classList.remove('done', 'wait');
+    zoneStep.textContent = '2';
+    eventStep.classList.add('wait');
+    eventStep.textContent = '3';
+  }
+}
+
+function renderEvents() {
+  const grid = document.getElementById('events-grid');
+  const hint = document.getElementById('events-hint');
+  grid.innerHTML = '';
+  const enabled = !!STATE.currentZone;
+  hint.textContent = enabled
+    ? 'Tocá el evento → elegí la opción en el popup'
+    : '👆 Tocá una zona para habilitar eventos · TRY no requiere zona';
+  hint.style.color = enabled ? 'var(--success)' : 'var(--text-mute)';
+
+  EVENT_DEFS.forEach(ed => {
+    const btn = document.createElement('button');
+    btn.className = 'event-btn';
+    // autoZone events (like Try) are always enabled regardless of zone selection
+    if (!enabled && !ed.autoZone) btn.classList.add('disabled');
+    if (ed.category === 'score') btn.classList.add('score');
+    if (ed.category === 'penal') btn.classList.add('danger');
+    if (ed.category === 'attack') btn.classList.add('attack');
+    btn.innerHTML = `<div class="event-icon">${ed.icon}</div><div class="event-name">${ed.name}</div>`;
+    btn.addEventListener('click', () => handleEventClick(ed));
+    grid.appendChild(btn);
+  });
+}
+
+function calculateScore(team) {
+  return STATE.events.filter(e => e.team === team).reduce((sum, e) => sum + (e.score || 0), 0);
+}
+
+function count(team, event, outcome) {
+  return STATE.events.filter(e =>
+    e.team === team && e.event === event &&
+    (outcome === undefined || e.outcome === outcome)
+  ).length;
+}
+function countByPrefix(team, event, prefix) {
+  return STATE.events.filter(e =>
+    e.team === team && e.event === event &&
+    (e.outcome || '').startsWith(prefix)
+  ).length;
+}
+
+function renderStats() {
+  const grid = document.getElementById('stats-grid');
+  grid.innerHTML = '';
+
+  const setPieces = [
+    { id: 'cajon', label: 'CAJÓN' },
+    { id: 'scrum', label: 'SCRUMS', hasRobado: true },
+    { id: 'line',  label: 'LINES',  hasRobado: true },
+    { id: 'ruck',  label: 'RUCKS'  },
+    { id: 'maul',  label: 'MAULS'  }
+  ];
+  setPieces.forEach(sp => {
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    const aW = count('A', sp.id, 'ganado'), aL = count('A', sp.id, 'perdido');
+    const bW = count('B', sp.id, 'ganado'), bL = count('B', sp.id, 'perdido');
+    const aR = sp.hasRobado ? count('A', sp.id, 'robado') : 0;
+    const bR = sp.hasRobado ? count('B', sp.id, 'robado') : 0;
+    const aTot = aW + aL + aR, bTot = bW + bL + bR;
+    const aPct = aTot ? Math.round((aW + aR)/aTot*100) : 0;
+    const bPct = bTot ? Math.round((bW + bR)/bTot*100) : 0;
+    let html = `
+      <div class="stat-label">${sp.label}</div>
+      <div class="stat-row"><span class="a val">${aW}</span><span class="lbl">Ganados</span><span class="b val">${bW}</span></div>
+      <div class="stat-row"><span class="a val">${aL}</span><span class="lbl">Perdidos</span><span class="b val">${bL}</span></div>`;
+    if (sp.hasRobado) {
+      html += `<div class="stat-row"><span class="a val">${aR}</span><span class="lbl">Robados</span><span class="b val">${bR}</span></div>`;
+    }
+    html += `<div class="stat-row"><span class="a val">${aPct}%</span><span class="lbl">Efectiv.</span><span class="b val">${bPct}%</span></div>`;
+    card.innerHTML = html;
+    grid.appendChild(card);
+  });
+
+  // Quiebres
+  const qCard = document.createElement('div');
+  qCard.className = 'stat-card';
+  qCard.style.gridColumn = '1 / -1';
+  const aQT = count('A','quiebre','contry'), bQT = count('B','quiebre','contry');
+  const aQC = count('A','quiebre','continuid'), bQC = count('B','quiebre','continuid');
+  const aQP = count('A','quiebre','placado'), bQP = count('B','quiebre','placado');
+  qCard.innerHTML = `
+    <div class="stat-label">QUIEBRES</div>
+    <div class="stat-row"><span class="a val">${aQT+aQC+aQP}</span><span class="lbl">Total quiebres</span><span class="b val">${bQT+bQC+bQP}</span></div>
+    <div class="stat-row"><span class="a val">${aQT}</span><span class="lbl">Con try</span><span class="b val">${bQT}</span></div>
+    <div class="stat-row"><span class="a val">${aQC}</span><span class="lbl">Continuidad</span><span class="b val">${bQC}</span></div>
+    <div class="stat-row"><span class="a val">${aQP}</span><span class="lbl">Placado</span><span class="b val">${bQP}</span></div>`;
+  grid.appendChild(qCard);
+
+  // Anotaciones
+  const scoring = document.createElement('div');
+  scoring.className = 'stat-card';
+  scoring.style.gridColumn = '1 / -1';
+  const aTry5 = count('A','try','try5');
+  const bTry5 = count('B','try','try5');
+  const aTry7 = count('A','try','try7') + count('A','try','trypenal');
+  const bTry7 = count('B','try','try7') + count('B','try','trypenal');
+  const aTries = aTry5 + aTry7, bTries = bTry5 + bTry7;
+  const aPen = count('A','penal','favor_palos_conv'), bPen = count('B','penal','favor_palos_conv');
+  const aPenM = count('A','penal','favor_palos_err'), bPenM = count('B','penal','favor_palos_err');
+  const aDrop = count('A','drop','convertido'), bDrop = count('B','drop','convertido');
+  const aDropM = count('A','drop','errado'), bDropM = count('B','drop','errado');
+  scoring.innerHTML = `
+    <div class="stat-label">ANOTACIONES</div>
+    <div class="stat-row"><span class="a val">${aTries}</span><span class="lbl">Tries totales</span><span class="b val">${bTries}</span></div>
+    <div class="stat-row"><span class="a val">${aTry7}/${aTries}</span><span class="lbl">Convertidos</span><span class="b val">${bTry7}/${bTries}</span></div>
+    <div class="stat-row"><span class="a val">${aPen}/${aPen+aPenM}</span><span class="lbl">Penales palos</span><span class="b val">${bPen}/${bPen+bPenM}</span></div>
+    <div class="stat-row"><span class="a val">${aDrop}/${aDrop+aDropM}</span><span class="lbl">Drops</span><span class="b val">${bDrop}/${bDrop+bDropM}</span></div>`;
+  grid.appendChild(scoring);
+
+  // Penales detalle
+  const penCard = document.createElement('div');
+  penCard.className = 'stat-card';
+  penCard.style.gridColumn = '1 / -1';
+  const aFavor = countByPrefix('A','penal','favor');
+  const bFavor = countByPrefix('B','penal','favor');
+  const aRec = count('A','penal','recibido');
+  const bRec = count('B','penal','recibido');
+  const aFk = countByPrefix('A','freekick','favor');
+  const bFk = countByPrefix('B','freekick','favor');
+  penCard.innerHTML = `
+    <div class="stat-label">PENALES / FREE KICKS</div>
+    <div class="stat-row"><span class="a val">${aFavor}</span><span class="lbl">Penales a favor</span><span class="b val">${bFavor}</span></div>
+    <div class="stat-row"><span class="a val">${aRec}</span><span class="lbl">Penales recibidos</span><span class="b val">${bRec}</span></div>
+    <div class="stat-row"><span class="a val">${aFk}</span><span class="lbl">Free kicks</span><span class="b val">${bFk}</span></div>`;
+  grid.appendChild(penCard);
+
+  // Knock-ons
+  const koCard = document.createElement('div');
+  koCard.className = 'stat-card';
+  koCard.style.gridColumn = '1 / -1';
+  const aKoF = count('A','knockon','favor'), bKoF = count('B','knockon','favor');
+  const aKoC = count('A','knockon','encontra'), bKoC = count('B','knockon','encontra');
+  koCard.innerHTML = `
+    <div class="stat-label">KNOCK ON</div>
+    <div class="stat-row"><span class="a val">${aKoF}</span><span class="lbl">A favor</span><span class="b val">${bKoF}</span></div>
+    <div class="stat-row"><span class="a val">${aKoC}</span><span class="lbl">En contra</span><span class="b val">${bKoC}</span></div>`;
+  grid.appendChild(koCard);
+
+  // Pérdidas
+  const pdCard = document.createElement('div');
+  pdCard.className = 'stat-card';
+  pdCard.style.gridColumn = '1 / -1';
+  const aPI = count('A','perdida','intercept'), bPI = count('B','perdida','intercept');
+  const aPF = count('A','perdida','forward'),   bPF = count('B','perdida','forward');
+  const aPT = count('A','perdida','tackle'),    bPT = count('B','perdida','tackle');
+  const aPO = count('A','perdida','otro'),      bPO = count('B','perdida','otro');
+  pdCard.innerHTML = `
+    <div class="stat-label">PÉRDIDAS DE POSESIÓN</div>
+    <div class="stat-row"><span class="a val">${aPI+aPF+aPT+aPO}</span><span class="lbl">Total</span><span class="b val">${bPI+bPF+bPT+bPO}</span></div>
+    <div class="stat-row"><span class="a val">${aPI}</span><span class="lbl">Intercept</span><span class="b val">${bPI}</span></div>
+    <div class="stat-row"><span class="a val">${aPF}</span><span class="lbl">Pase adelant.</span><span class="b val">${bPF}</span></div>
+    <div class="stat-row"><span class="a val">${aPT}</span><span class="lbl">En el tackle</span><span class="b val">${bPT}</span></div>
+    <div class="stat-row"><span class="a val">${aPO}</span><span class="lbl">Otro</span><span class="b val">${bPO}</span></div>`;
+  grid.appendChild(pdCard);
+
+  // Kicks juego
+  const kicks = document.createElement('div');
+  kicks.className = 'stat-card';
+  kicks.style.gridColumn = '1 / -1';
+  kicks.innerHTML = `
+    <div class="stat-label">KICKS (JUEGO)</div>
+    <div class="stat-row"><span class="a val">${count('A','kick','aseguir')}</span><span class="lbl">A seguir</span><span class="b val">${count('B','kick','aseguir')}</span></div>
+    <div class="stat-row"><span class="a val">${count('A','kick','touch')}</span><span class="lbl">Sale lateral</span><span class="b val">${count('B','kick','touch')}</span></div>
+    <div class="stat-row"><span class="a val">${count('A','kick','directo')}</span><span class="lbl">Directo</span><span class="b val">${count('B','kick','directo')}</span></div>`;
+  grid.appendChild(kicks);
+
+  // Heatmaps
+  ['A', 'B'].forEach(t => {
+    const hm = document.createElement('div');
+    hm.className = 'stat-card';
+    hm.style.gridColumn = '1 / -1';
+    const tname = t === 'A' ? STATE.config.teamA : STATE.config.teamB;
+    const counts = [0,0,0,0,0,0];
+    STATE.events.filter(e => e.team === t).forEach(e => { if (e.zone) counts[e.zone-1]++; });
+    const max = Math.max(1, ...counts);
+    const colorVar = t === 'A' ? '228, 61, 61' : '61, 141, 228';
+    hm.innerHTML = `
+      <div class="stat-label" style="color: var(--team-${t.toLowerCase()})">
+        MAPA DE EVENTOS · ${tname.toUpperCase()}
+      </div>
+      <div class="heatmap">
+        ${counts.map(c => {
+          const pct = c / max;
+          return `<div class="heat-cell" style="background:rgba(${colorVar}, ${0.1 + pct * 0.75}); ${pct > 0.5 ? 'color: #fff' : ''}">${c}</div>`;
+        }).join('')}
+      </div>
+      <div class="heatmap-labels">
+        <div>Try Pr.</div><div>22 Pr.</div><div>40 Pr.</div><div>40 Ri.</div><div>22 Ri.</div><div>Try Ri.</div>
+      </div>`;
+    grid.appendChild(hm);
+  });
+}
+
+function renderHistory() {
+  const list = document.getElementById('event-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!STATE.events.length) {
+    list.innerHTML = '<div class="empty">Aún no hay eventos registrados.<br>Seleccioná una zona y un evento para empezar.</div>';
+    return;
+  }
+  const sorted = [...STATE.events].reverse();
+  sorted.forEach(ev => {
+    const tname = ev.team === 'A' ? STATE.config.teamA : STATE.config.teamB;
+    const tcolor = ev.team === 'A' ? 'var(--team-a)' : 'var(--team-b)';
+    const edef = EVENT_DEFS.find(d => d.id === ev.event);
+    const evName = edef ? edef.name : ev.event;
+    const outcome = ev.outcomeLabel ? ` · <b>${ev.outcomeLabel}</b>` : '';
+    const synced = STATE.syncedIds.has(ev.id);
+    const time = new Date(ev.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const pts = ev.score ? ` <span style="color:var(--accent)">+${ev.score}</span>` : '';
+    const item = document.createElement('div');
+    item.className = 'event-item';
+    item.innerHTML = `
+      <div class="event-time">
+        ${time}<br>
+        <span class="sync-mark ${synced ? '' : 'pending'}">${synced ? '✓' : '○'}</span>
+      </div>
+      <div class="event-desc">
+        <span class="team-indicator" style="background:${tcolor}"></span>
+        <span class="team-name-sm">${tname}</span> · ${evName}${pts}${outcome}
+        <div class="muted">Zona ${ev.zone} (${ev.zoneDesc}) · ${ev.half}T</div>
+      </div>
+      <button class="event-del" onclick="deleteEvent('${ev.id}')">✕</button>`;
+    list.appendChild(item);
+  });
+}
+
+function updateSyncButton() {
+  const pending = STATE.events.filter(e => !STATE.syncedIds.has(e.id)).length;
+  const label = document.getElementById('sync-label');
+  if (pending > 0) {
+    label.textContent = `GUARDAR (${pending})`;
+  } else {
+    label.textContent = 'AL DÍA ✓';
+  }
+}
+
+// ==================== EVENT HANDLING ====================
+function handleEventClick(ed) {
+  if (!ed.autoZone && !STATE.currentZone) {
+    showToast('Seleccioná una zona primero', 'error');
+    return;
+  }
+  STATE.modalPath = [{ ed, title: ed.name.toUpperCase(), options: ed.outcomes }];
+  renderOutcomeModal();
+  openModal('outcome-modal');
+}
+
+function renderOutcomeModal() {
+  const title = document.getElementById('outcome-title');
+  const grid = document.getElementById('outcome-grid');
+  const teamPill = document.getElementById('oc-team-pill');
+  const zonePill = document.getElementById('oc-zone-pill');
+  const backBtn = document.getElementById('modal-back');
+
+  const current = STATE.modalPath[STATE.modalPath.length - 1];
+  const options = current.options;
+
+  // Breadcrumb title
+  title.textContent = STATE.modalPath.map(p => p.title).join(' › ');
+
+  const teamName = STATE.currentTeam === 'A' ? STATE.config.teamA : STATE.config.teamB;
+  teamPill.textContent = teamName;
+  teamPill.className = `pill team-${STATE.currentTeam.toLowerCase()}`;
+  const rootEd = STATE.modalPath[0].ed;
+  const zoneNum = rootEd.autoZone || STATE.currentZone;
+  const zd = ZONE_DEFS.find(z => z.n === zoneNum);
+  if (zd) {
+    const autoTag = rootEd.autoZone ? ' (auto)' : '';
+    zonePill.textContent = `Z${zd.n} · ${zd.label.replace('\n',' ')}${autoTag}`;
+  }
+
+  backBtn.classList.toggle('hidden', STATE.modalPath.length <= 1);
+
+  grid.innerHTML = '';
+  grid.className = 'outcome-grid';
+  if (options.length === 1) grid.classList.add('cols-1');
+  if (options.length >= 5) grid.classList.add('cols-3');
+
+  options.forEach(oc => {
+    const btn = document.createElement('button');
+    btn.className = `outcome-btn ${oc.cls || 'neutral'}`;
+    btn.innerHTML = `<div>${oc.label}</div>${oc.hint ? `<div class="oc-hint">${oc.hint}</div>` : ''}`;
+    btn.addEventListener('click', () => {
+      if (oc.sub && oc.sub.length) {
+        STATE.modalPath.push({ title: oc.label, options: oc.sub, parent: oc });
+        renderOutcomeModal();
+      } else {
+        // Build composite outcomeId and outcomeLabel
+        const rootEd = STATE.modalPath[0].ed;
+        const path = STATE.modalPath.slice(1).map(p => p.parent.id);
+        path.push(oc.id);
+        const outcomeId = path.join('_');
+        const labels = STATE.modalPath.slice(1).map(p => p.parent.label);
+        labels.push(oc.label);
+        const outcomeLabel = labels.join(' · ');
+        logEvent(rootEd, outcomeId, outcomeLabel, oc.score || 0);
+        closeModal('outcome-modal');
+      }
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function modalBack() {
+  if (STATE.modalPath.length <= 1) return;
+  STATE.modalPath.pop();
+  renderOutcomeModal();
+}
+
+function logEvent(ed, outcomeId, outcomeLabel, score) {
+  const zoneNum = ed.autoZone || STATE.currentZone;
+  const zd = ZONE_DEFS.find(z => z.n === zoneNum);
+  const ev = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    timestamp: new Date().toISOString(),
+    match: STATE.config.matchName || 'Sin nombre',
+    half: STATE.currentHalf,
+    team: STATE.currentTeam,
+    teamName: STATE.currentTeam === 'A' ? STATE.config.teamA : STATE.config.teamB,
+    event: ed.id,
+    eventName: ed.name,
+    outcome: outcomeId,
+    outcomeLabel: outcomeLabel,
+    zone: zoneNum,
+    zoneDesc: zd ? zd.label.replace('\n', ' ') : '',
+    score: score || 0
+  };
+  STATE.events.push(ev);
+  saveEvents();
+  const ptsTxt = score ? ` (+${score})` : '';
+  showToast(`✓ ${ed.name} · ${outcomeLabel}${ptsTxt}`, 'success');
+  render();
+}
+
+function deleteEvent(id) {
+  STATE.events = STATE.events.filter(e => e.id !== id);
+  STATE.syncedIds.delete(id);
+  saveEvents(); saveSynced();
+  showToast('✗ Evento borrado', 'success');
+  render();
+}
+
+function undoLast() {
+  if (!STATE.events.length) { showToast('Nada para deshacer', 'error'); return; }
+  const last = STATE.events.pop();
+  STATE.syncedIds.delete(last.id);
+  saveEvents(); saveSynced();
+  const name = last.eventName + (last.outcomeLabel ? ' · ' + last.outcomeLabel : '');
+  showToast(`↶ Deshecho: ${name}`, 'success');
+  render();
+}
+
+function clearZone() {
+  STATE.currentZone = null;
+  render();
+}
+
+// ==================== SYNC ====================
+async function syncNow() {
+  if (!STATE.config.sheetUrl) {
+    showToast('Configurá la URL de Google Sheets', 'error');
+    openSettings();
+    return;
+  }
+  const toSync = STATE.events.filter(e => !STATE.syncedIds.has(e.id));
+  if (!toSync.length) {
+    showToast('Todo sincronizado ✓', 'success');
+    return;
+  }
+  showToast(`Enviando ${toSync.length} eventos...`, 'success');
+  try {
+    // Send outcomeLabel as the "outcome" field for readability in Sheets
+    const payload = toSync.map(e => ({ ...e, outcome: e.outcomeLabel || e.outcome }));
+    const res = await fetch(STATE.config.sheetUrl, {
+      method: 'POST',
+      body: JSON.stringify({ events: payload }),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      redirect: 'follow'
+    });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch(e) { throw new Error('Respuesta inválida del servidor'); }
+    if (data && data.ok) {
+      toSync.forEach(e => STATE.syncedIds.add(e.id));
+      saveSynced();
+      showToast(`✓ ${data.saved} eventos guardados en Sheets`, 'success');
+      render();
+    } else {
+      throw new Error('Error del servidor');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('❌ Error al sincronizar. Revisá la URL.', 'error');
+  }
+}
+
+function downloadCSV() {
+  if (!STATE.events.length) { showToast('No hay eventos', 'error'); return; }
+  const headers = ['ID','FechaHora','Partido','Tiempo','Equipo','Evento','Resultado','Zona','ZonaDesc','Puntos'];
+  const rows = STATE.events.map(e => [
+    e.id, e.timestamp, e.match, e.half, e.teamName,
+    e.eventName, e.outcomeLabel || e.outcome || '', e.zone, e.zoneDesc, e.score || 0
+  ]);
+  const csv = [headers, ...rows]
+    .map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(','))
+    .join('\n');
+
+  const filename = `rugby-stats-${new Date().toISOString().slice(0,10)}.csv`;
+
+  // Try multiple download strategies — webviews block different ones
+  let downloaded = false;
+  try {
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+    downloaded = true;
+  } catch(e) { console.warn('Blob download failed', e); }
+
+  // Always show fallback modal regardless — gives user the option to copy or share
+  showCSVFallback(csv, filename);
+  if (downloaded) showToast('Si no se descargó, copiá el texto', 'success');
+}
+
+function showCSVFallback(csv, filename) {
+  const modal = document.getElementById('csv-fallback-modal');
+  document.getElementById('csv-content').value = csv;
+  document.getElementById('csv-filename').textContent = filename;
+  openModal('csv-fallback-modal');
+}
+
+async function copyCSV() {
+  const text = document.getElementById('csv-content').value;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('✓ CSV copiado al portapapeles', 'success');
+  } catch(e) {
+    // Fallback: select the textarea
+    const ta = document.getElementById('csv-content');
+    ta.select();
+    ta.setSelectionRange(0, 99999);
+    try {
+      document.execCommand('copy');
+      showToast('✓ CSV copiado', 'success');
+    } catch(e2) {
+      showToast('Tocá el texto y copialo manualmente', 'error');
+    }
+  }
+}
+
+async function shareCSV() {
+  const text = document.getElementById('csv-content').value;
+  const filename = document.getElementById('csv-filename').textContent;
+  if (navigator.share) {
+    try {
+      // Try sharing as file first
+      const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' });
+      const file = new File([blob], filename, { type: 'text/csv' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Rugby Stats CSV' });
+        return;
+      }
+      // Fallback: share as text
+      await navigator.share({ title: filename, text: text });
+    } catch(e) {
+      if (e.name !== 'AbortError') showToast('No se pudo compartir', 'error');
+    }
+  } else {
+    showToast('Compartir no disponible — copiá el texto', 'error');
+  }
+}
+
+// ==================== MODALS ====================
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+  if (id === 'outcome-modal') STATE.modalPath = [];
+}
+
+function openSettings() {
+  document.getElementById('cfg-match').value = STATE.config.matchName;
+  document.getElementById('cfg-team-a').value = STATE.config.teamA;
+  document.getElementById('cfg-team-b').value = STATE.config.teamB;
+  document.getElementById('cfg-sheet-url').value = STATE.config.sheetUrl;
+  document.getElementById('apps-script-code').textContent = APPS_SCRIPT_CODE;
+  openModal('settings-modal');
+}
+
+function saveSettings() {
+  STATE.config.matchName = document.getElementById('cfg-match').value.trim();
+  STATE.config.teamA = document.getElementById('cfg-team-a').value.trim() || 'Equipo A';
+  STATE.config.teamB = document.getElementById('cfg-team-b').value.trim() || 'Equipo B';
+  STATE.config.sheetUrl = document.getElementById('cfg-sheet-url').value.trim();
+  saveConfig();
+  render();
+  closeModal('settings-modal');
+  showToast('✓ Configuración guardada', 'success');
+}
+
+let _resetArmed = false;
+let _resetTimer = null;
+function resetMatch() {
+  const btn = document.getElementById('btn-reset');
+  if (!_resetArmed) {
+    _resetArmed = true;
+    btn.textContent = '⚠ TOCÁ DE NUEVO PARA CONFIRMAR';
+    btn.style.background = 'var(--danger)';
+    btn.style.color = '#fff';
+    showToast('⚠ Tocá de nuevo para borrar todo', 'error');
+    clearTimeout(_resetTimer);
+    _resetTimer = setTimeout(() => {
+      _resetArmed = false;
+      btn.textContent = '⚠ RESET PARTIDO';
+      btn.style.background = '';
+      btn.style.color = '';
+    }, 3500);
+    return;
+  }
+  clearTimeout(_resetTimer);
+  _resetArmed = false;
+  btn.textContent = '⚠ RESET PARTIDO';
+  btn.style.background = '';
+  btn.style.color = '';
+  STATE.events = [];
+  STATE.syncedIds.clear();
+  saveEvents(); saveSynced();
+  render();
+  closeModal('settings-modal');
+  showToast('✓ Partido reiniciado', 'success');
+}
+
+// ==================== TOAST ====================
+let toastTimer;
+function showToast(msg, type = 'success') {
+  clearTimeout(toastTimer);
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  toastTimer = setTimeout(() => t.remove(), 2200);
+}
+
+// ==================== LISTENERS ====================
+document.getElementById('team-a-btn').addEventListener('click', () => { STATE.currentTeam = 'A'; render(); });
+document.getElementById('team-b-btn').addEventListener('click', () => { STATE.currentTeam = 'B'; render(); });
+document.getElementById('half-1').addEventListener('click', () => { STATE.currentHalf = 1; saveHalf(); render(); });
+document.getElementById('half-2').addEventListener('click', () => { STATE.currentHalf = 2; saveHalf(); render(); });
+document.getElementById('btn-settings').addEventListener('click', openSettings);
+document.getElementById('btn-undo').addEventListener('click', undoLast);
+document.getElementById('btn-history').addEventListener('click', () => openModal('history-modal'));
+document.getElementById('btn-sync').addEventListener('click', syncNow);
+document.getElementById('btn-reset').addEventListener('click', resetMatch);
+document.getElementById('btn-clear-zone').addEventListener('click', clearZone);
+document.getElementById('modal-back').addEventListener('click', modalBack);
+document.getElementById('stats-toggle').addEventListener('click', () => {
+  document.getElementById('stats-grid').classList.toggle('hidden');
+  document.getElementById('stats-toggle').classList.toggle('open');
+});
+document.getElementById('btn-copy-script').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(APPS_SCRIPT_CODE);
+    showToast('✓ Código copiado', 'success');
+  } catch(e) { showToast('No se pudo copiar', 'error'); }
+});
+document.querySelectorAll('.modal-backdrop').forEach(bd => {
+  bd.addEventListener('click', (e) => {
+    if (e.target === bd) closeModal(bd.id);
+  });
+});
+
+// Init
+(async function() {
+  await loadState();
+  render();
+  if (!STATE.config.matchName && !STATE.events.length && STATE.config.teamA === 'Equipo A') {
+    setTimeout(openSettings, 400);
+  }
+})();
+</script>
+</body>
+</html>
