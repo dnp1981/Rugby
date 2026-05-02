@@ -328,58 +328,70 @@ body {
 /* Selection bar */
 .selection-bar {
   max-width: 900px;
-  margin: 8px auto 0;
+  margin: 6px auto 0;
   padding: 0 14px;
 }
 .selection-inner {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 11px;
-}
-.sel-left {
+  border-radius: 5px;
+  padding: 3px 8px;
   display: flex;
   align-items: center;
   gap: 5px;
-  flex-wrap: wrap;
-  flex: 1;
+  font-size: 11px;
+  min-height: 26px;
 }
 .sel-label {
   font-family: var(--display);
-  font-size: 10px;
-  letter-spacing: 1.2px;
+  font-size: 9px;
+  letter-spacing: 1px;
   color: var(--text-mute);
+  flex-shrink: 0;
 }
-.pill {
-  display: inline-block;
-  padding: 2px 7px;
-  border-radius: 999px;
-  font-family: var(--mono);
-  font-size: 10px;
+.chip {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px !important;
+  border-radius: 3px !important;
+  font-family: var(--body);
+  font-size: 9.5px !important;
   font-weight: 700;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   border: 1px solid transparent;
+  line-height: 1;
+  height: 15px !important;
+  min-height: 15px !important;
+  max-height: 15px !important;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
+.chip.team-a { background: var(--team-a-bg); color: var(--team-a); border-color: var(--team-a-dim); }
+.chip.team-b { background: var(--team-b-bg); color: var(--team-b); border-color: var(--team-b-dim); }
+.chip.field-zone { background: rgba(251, 191, 36, 0.14); color: var(--accent); border-color: var(--accent-dim); }
+.chip.empty { background: var(--surface-2); color: var(--text-mute); border-color: var(--border); }
+/* Pill is alias of chip — used in popups */
+.pill { display: inline-flex; align-items: center; justify-content: center; padding: 1px 6px; border-radius: 3px; font-family: var(--body); font-size: 9.5px; font-weight: 700; letter-spacing: 0.2px; border: 1px solid transparent; line-height: 1; height: 15px; white-space: nowrap; }
 .pill.team-a { background: var(--team-a-bg); color: var(--team-a); border-color: var(--team-a-dim); }
 .pill.team-b { background: var(--team-b-bg); color: var(--team-b); border-color: var(--team-b-dim); }
-.pill.zone { background: rgba(251, 191, 36, 0.14); color: var(--accent); border-color: var(--accent-dim); }
-.pill.empty { background: var(--surface-2); color: var(--text-mute); border-color: var(--border); }
+.pill.field-zone { background: rgba(251, 191, 36, 0.14); color: var(--accent); border-color: var(--accent-dim); }
 .clear-zone {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-mute);
-  padding: 4px 9px;
-  border-radius: 6px;
-  font-size: 10px;
+  padding: 0 6px;
+  border-radius: 3px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   cursor: pointer;
   text-transform: uppercase;
+  height: 15px;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
 }
 .clear-zone:hover { color: var(--text); border-color: var(--border-bright); }
 
@@ -641,9 +653,21 @@ body {
 
 .ctx-strip {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 5px;
   margin-bottom: 14px;
-  flex-wrap: wrap;
+  padding: 4px 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 10px;
+}
+.ctx-strip .ctx-label {
+  font-family: var(--display);
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--text-mute);
+  margin-right: 2px;
 }
 
 /* Outcome grid */
@@ -884,12 +908,10 @@ body {
 <!-- Selection -->
 <div class="selection-bar">
   <div class="selection-inner">
-    <div class="sel-left">
-      <span class="sel-label">REGISTRAR:</span>
-      <span class="pill team-a" id="sel-team">EQUIPO A</span>
-      <span class="pill empty" id="sel-zone">Sin zona</span>
-    </div>
-    <button class="clear-zone hidden" id="btn-clear-zone">Limpiar</button>
+    <span class="sel-label">REGISTRAR</span>
+    <span class="chip team-a" id="sel-team">EQUIPO A</span>
+    <span class="chip empty" id="sel-zone">Sin zona</span>
+    <button class="clear-zone hidden" id="btn-clear-zone">✕</button>
   </div>
 </div>
 
@@ -924,8 +946,9 @@ body {
     </div>
     <div class="modal-body">
       <div class="ctx-strip">
+        <span class="ctx-label">REGISTRAR</span>
         <span class="pill" id="oc-team-pill">EQUIPO</span>
-        <span class="pill zone" id="oc-zone-pill">ZONA</span>
+        <span class="pill field-zone" id="oc-zone-pill">ZONA</span>
       </div>
       <div class="outcome-grid" id="outcome-grid"></div>
     </div>
@@ -1265,19 +1288,19 @@ function renderField() {
 }
 
 function renderSelection() {
-  const teamPill = document.getElementById('sel-team');
+  const teamChip = document.getElementById('sel-team');
   const teamName = STATE.currentTeam === 'A' ? STATE.config.teamA : STATE.config.teamB;
-  teamPill.textContent = teamName;
-  teamPill.className = `pill team-${STATE.currentTeam.toLowerCase()}`;
+  teamChip.textContent = teamName;
+  teamChip.className = `chip team-${STATE.currentTeam.toLowerCase()}`;
 
-  const zonePill = document.getElementById('sel-zone');
+  const zoneChip = document.getElementById('sel-zone');
   const zd = ZONE_DEFS.find(z => z.n === STATE.currentZone);
   if (zd) {
-    zonePill.textContent = `Z${zd.n} · ${zd.label.replace('\n',' ')}`;
-    zonePill.className = 'pill zone';
+    zoneChip.textContent = `Z${zd.n} · ${zd.label.replace('\n',' ')}`;
+    zoneChip.className = 'chip field-zone';
   } else {
-    zonePill.textContent = 'Sin zona';
-    zonePill.className = 'pill empty';
+    zoneChip.textContent = 'Sin zona';
+    zoneChip.className = 'chip empty';
   }
   document.getElementById('btn-clear-zone').classList.toggle('hidden', !zd);
 }
